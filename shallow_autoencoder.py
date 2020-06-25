@@ -1,7 +1,6 @@
 import keras.backend as K
 import numpy as np
 import tensorflow as tf
-import tensorflow_probability as tfp
 from keras import Input
 from keras.initializers import glorot_normal, zeros
 from keras.layers import (Activation, Add, BatchNormalization, Concatenate,
@@ -43,18 +42,18 @@ def run_input(layers, x):
     return x
 
 
-def shallow_autoencoder(input_shape, output_dims, lambda_, sizes=(40,25,15)):
+def shallow_autoencoder(snapshot_shape, output_dims, lambda_, sizes=(40,25,15)):
     """
     Create a shallow autoencoder model
     Args:
-        input_shape (tuple of int)
+        snapshot_shape (tuple of int): shape of snapshots, without batchsize or channels
         output_dims (int): number of output channels
         lambda_ (float): weighting factor for inverse regularizer
         sizes (tuple of int): depth of layers in decreasing order of size. default (40,25,15)
     Returns:
         4 Models: full, encoder, dynamics, decoder
     """
-    inpt = Input(input_shape)
+    inpt = Input(snapshot_shape + (None,))
     large, medium, small = sizes
 
     # Encoder --------------------------------------
