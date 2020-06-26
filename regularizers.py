@@ -1,30 +1,23 @@
 import keras.backend as K
 import numpy as np
 import tensorflow as tf
-from keras import Input
 from keras.initializers import glorot_normal, zeros
-from keras.layers import (Activation, Add, BatchNormalization, Concatenate,
-                          Conv2D, Cropping2D, Dense, Dropout,
-                          GlobalAveragePooling2D, GlobalMaxPooling2D, Input,
-                          Lambda, Layer, LeakyReLU, MaxPooling2D, ReLU,
-                          Reshape, Softmax, Subtract, UpSampling2D,
-                          ZeroPadding2D, add)
 from keras.models import Model
 from keras.activations import tanh
 import jax
 import scipy
 
 
-def inverse_reg(x, encoder: Model, decoder: Model, lambda_):
+def inverse_reg(x, batch_size, encoder, decoder, lambda_):
     """
     regularizer to enforce that the decoder is the inverse of the encoder. 
     Equation 9 per Erichson et al.  
     Args:
-        encoder, decoder: Keras Models
+        encoder, decoder: composed layers
         lambda_: weighting hyperparameter for this loss term
     """
-    q = encoder.predict(x)
-    q_pred = encoder.predict( decoder.predict(q) )
+    q = encoder(x)
+    q_pred = encoder(decoder(q))
     norm = K.sum(K.square(q - q_pred))
     return lambda_ * norm
 

@@ -39,5 +39,6 @@ def flow_cylinder():
 
     Xsmall_test = X[100:151, :, :].reshape(51, -1)
 
+    print("shape2", Xsmall.shape)
     return Xsmall, Xsmall_test
 
