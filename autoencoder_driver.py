@@ -7,6 +7,7 @@ from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau
 from keras.losses import mse
 from keras.models import Model
 from keras.optimizers import Adam
+from keras import metrics
 
 from read_dataset import *
 from regularizers import inverse_reg, lyapunov_stability_reg
@@ -17,8 +18,8 @@ os.makedirs("weights", exist_ok=True)
 
 lr = 0.001
 batch_size = 34
-lambda_ = 2
-kappa = 3
+lambda_ = 3 # inverse loss weight
+kappa = 20 # stability loss weight
 epochs = 4000
 
 # Read Data
@@ -29,12 +30,13 @@ datashape = X[0].shape
 models = shallow_autoencoder(
     snapshot_shape=datashape,
     output_dims=datashape[-1],
+    kappa=kappa,
     lambda_=lambda_,
 )
 autoencoder, encoder, dynamics, decoder = models
 
 optimizer = Adam(lr)
-autoencoder.compile(optimizer=optimizer, loss=mse)
+autoencoder.compile(optimizer=optimizer, loss=mse, metrics=[metrics.MeanSquaredError()])
 
 # targets are one timestep ahead of inputs
 Y = X[:-1]
@@ -43,7 +45,7 @@ Ytest = Xtest[:-1]
 Xtest = Xtest[1:]
 
 callbacks = []
-callbacks.append(ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=15, min_lr=0.00005))
+callbacks.append(ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=50, min_lr=(lr / 16), verbose=1))
 callbacks.append(ModelCheckpoint("weights/test.hdf5", save_best_only=True, verbose=1))
 
 print(X.shape, Y.shape)
@@ -53,5 +55,6 @@ history = autoencoder.fit(
     batch_size=batch_size,
     epochs=epochs,
     callbacks=callbacks,
-    validation_split=0.1,
+    validation_data=(Xtest, Ytest),
+    verbose=2,
 )

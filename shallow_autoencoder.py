@@ -14,6 +14,32 @@ from keras.activations import tanh
 
 from regularizers import *
 
+class ComposedLayers():
+    """
+    halfway between a Layer and a Model, because Models don't allow symbolic
+    tensors as inputs, and we need to access individual Layer weights for the
+    stability regularizer
+    """
+
+    def __init__(self, layers):
+        self.layers = layers
+        self.composed = self._compose_layers(layers)
+
+    def _compose_layers(self, layers):
+        """
+        turn a list of layers into one callable, where the layers get called in 
+        the order of the list
+        """
+        if len(layers) == 0:
+            return lambda x: x
+        def f(x):
+            return layers[-1]( self._compose_layers(layers[:-1])(x) )
+        return f
+
+    def __call__(self, x):
+        return self.composed(x)
+
+
 
 def make_fc_block(output_dims, name, activate=True, batchnorm=False):
     """
@@ -35,25 +61,15 @@ def make_fc_block(output_dims, name, activate=True, batchnorm=False):
     return layers
 
 
-def compose_layers(layers):
-    """
-    turn a list of layers into one callable, where the layers get called in 
-    the order of the list
-    """
-    if len(layers) == 0:
-        return lambda x: x
-    def f(x):
-        return layers[-1]( compose_layers(layers[:-1])(x) )
-    return f
 
-
-def shallow_autoencoder(snapshot_shape, output_dims, lambda_, sizes=(40,25,15)):
+def shallow_autoencoder(snapshot_shape, output_dims, lambda_, kappa, sizes=(40,25,15)):
     """
     Create a shallow autoencoder model
     Args:
         snapshot_shape (tuple of int): shape of snapshots, without batchsize or channels
         output_dims (int): number of output channels
         lambda_ (float): weighting factor for inverse regularizer
+        kappa (float): weighting factor for stability regularizer
         sizes (tuple of int): depth of layers in decreasing order of size. default (40,25,15)
     Returns:
         full: Keras Model for full autoencoder
@@ -70,13 +86,13 @@ def shallow_autoencoder(snapshot_shape, output_dims, lambda_, sizes=(40,25,15)):
     encoder_layers += make_fc_block(medium, name="enc2")
     encoder_layers += make_fc_block(small, activate=False, batchnorm=True, name="enc3")
 
-    encoder = compose_layers(encoder_layers)
+    encoder = ComposedLayers(encoder_layers)
     encoded_output = encoder(inpt)
 
     # Dynamics -------------------------------------
     dynamics_layers = make_fc_block(small, activate=False, name="dyn1")
 
-    dynamics = compose_layers(dynamics_layers)
+    dynamics = ComposedLayers(dynamics_layers)
     dynamics_output = dynamics(encoded_output)
 
     # Decoder --------------------------------------
@@ -84,17 +100,21 @@ def shallow_autoencoder(snapshot_shape, output_dims, lambda_, sizes=(40,25,15)):
     decoder_layers += make_fc_block(large, name="dec2")
     decoder_layers += make_fc_block(output_dims, activate=False, name="dec3")
 
-    decoder = compose_layers(decoder_layers)
+    decoder = ComposedLayers(decoder_layers)
     output = decoder(dynamics_output)
 
     # Create full model ----------------------------
     model = Model(inpt, output)
 
+    # lyapunov stability regularization
+    stability_loss = lyapunov_stability_reg_2(dynamics, small, kappa)
+    model.add_loss(stability_loss)
+    model.add_metric(stability_loss, "stability_loss")
+
     # regularize inverse property of encoder-decoder
-    model.add_loss(
-        losses=inverse_reg(inpt, encoder, decoder, lambda_=lambda_),
-        inputs=[inpt, encoded_output, output]
-    )
+    inv_loss = inverse_reg(inpt, encoder, decoder, lambda_=lambda_)
+    model.add_loss(inv_loss)
+    model.add_metric(inv_loss, "inv_loss")
 
     return model, encoder, dynamics, decoder
 
