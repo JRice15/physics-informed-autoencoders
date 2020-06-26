@@ -12,7 +12,7 @@ from keras.layers import (Activation, Add, BatchNormalization, Concatenate,
 from keras.models import Model
 from keras.activations import tanh
 
-from regularizers import *
+from regularizers import inverse_reg, LyapunovStableDense
 
 class ComposedLayers():
     """
@@ -72,8 +72,7 @@ def shallow_autoencoder(snapshot_shape, output_dims, lambda_, kappa, sizes=(40,2
         kappa (float): weighting factor for stability regularizer
         sizes (tuple of int): depth of layers in decreasing order of size. default (40,25,15)
     Returns:
-        full: Keras Model for full autoencoder
-        encoder, dynamics, decoder: callable composed layers (see compose_layers)
+        Keras Model for full autoencoder
     """
     # add channels
     inpt = Input(snapshot_shape)
@@ -90,9 +89,11 @@ def shallow_autoencoder(snapshot_shape, output_dims, lambda_, kappa, sizes=(40,2
     encoded_output = encoder(inpt)
 
     # Dynamics -------------------------------------
-    dynamics_layers = make_fc_block(small, activate=False, name="dyn1")
-
-    dynamics = ComposedLayers(dynamics_layers)
+    # this class regularizes the stability of the dynamics operation
+    dynamics = LyapunovStableDense(kappa=kappa, units=small,
+        kernel_initializer=glorot_normal(), bias_initializer=zeros(),
+        name="lyapunovstable-dense"
+    )
     dynamics_output = dynamics(encoded_output)
 
     # Decoder --------------------------------------
@@ -106,17 +107,12 @@ def shallow_autoencoder(snapshot_shape, output_dims, lambda_, kappa, sizes=(40,2
     # Create full model ----------------------------
     model = Model(inpt, output)
 
-    # lyapunov stability regularization
-    stability_loss = lyapunov_stability_reg_2(dynamics, small, kappa)
-    model.add_loss(stability_loss)
-    model.add_metric(stability_loss, "stability_loss")
-
     # regularize inverse property of encoder-decoder
     inv_loss = inverse_reg(inpt, encoder, decoder, lambda_=lambda_)
     model.add_loss(inv_loss)
     model.add_metric(inv_loss, "inv_loss")
 
-    return model, encoder, dynamics, decoder
+    return model
 
 
 

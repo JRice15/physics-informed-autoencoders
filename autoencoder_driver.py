@@ -27,14 +27,12 @@ X, Xtest = data_from_name("flow_cylinder")
 datashape = X[0].shape
 
 # Create Model
-models = shallow_autoencoder(
+autoencoder = shallow_autoencoder(
     snapshot_shape=datashape,
     output_dims=datashape[-1],
     kappa=kappa,
     lambda_=lambda_,
 )
-autoencoder, encoder, dynamics, decoder = models
-
 optimizer = Adam(lr)
 autoencoder.compile(optimizer=optimizer, loss=mse, metrics=[metrics.MeanSquaredError()])
 
