@@ -62,7 +62,8 @@ def make_fc_block(output_dims, name, activate=True, batchnorm=False):
 
 
 
-def shallow_autoencoder(snapshot_shape, output_dims, lambda_, kappa, sizes=(40,25,15)):
+def shallow_autoencoder(snapshot_shape, output_dims, lambda_, kappa, gamma,
+        no_stability=False, sizes=(40,25,15)):
     """
     Create a shallow autoencoder model
     Args:
@@ -90,10 +91,13 @@ def shallow_autoencoder(snapshot_shape, output_dims, lambda_, kappa, sizes=(40,2
 
     # Dynamics -------------------------------------
     # this class regularizes the stability of the dynamics operation
-    dynamics = LyapunovStableDense(kappa=kappa, units=small,
-        kernel_initializer=glorot_normal(), bias_initializer=zeros(),
-        name="lyapunovstable-dense"
-    )
+    if not no_stability:
+        dynamics = LyapunovStableDense(kappa=kappa, gamma=gamma, units=small,
+            kernel_initializer=glorot_normal(), bias_initializer=zeros(),
+            name="lyapunovstable-dynamics-dense")
+    else:
+        dynamics = Dense(small, kernel_initializer=glorot_normal(), 
+            bias_initializer=zeros(), name="dynamics-dense")
     dynamics_output = dynamics(encoded_output)
 
     # Decoder --------------------------------------
