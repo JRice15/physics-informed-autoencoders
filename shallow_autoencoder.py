@@ -15,7 +15,7 @@ from keras.activations import tanh
 from regularizers import *
 
 
-def make_fc_block(output_dims, activate=True, batchnorm=False):
+def make_fc_block(output_dims, name, activate=True, batchnorm=False):
     """
     creates a fully connected layer, with optional tanh activation and batchnorm
     Returns:
@@ -25,20 +25,14 @@ def make_fc_block(output_dims, activate=True, batchnorm=False):
     layers.append(
         Dense(output_dims,
             kernel_initializer=glorot_normal(), # aka Xavier Normal
-            bias_initializer=zeros())
+            bias_initializer=zeros(),
+            name=name+"-dense")
     )
     if activate:
-        layers.append( Activation(tanh) )
+        layers.append( Activation(tanh, name=name+"-tanh") )
     if batchnorm:
-        layers.append( BatchNormalization() )
+        layers.append( BatchNormalization(name=name+"-batchnorm") )
     return layers
-
-
-def get_input_shape(batch_size, tensor):
-    """
-    convert the shape of an output tensor into a valid same shape passed to Input
-    """
-    return [batch_size] + [int(i) for i in tensor.shape[1:]]
 
 
 def compose_layers(layers):
@@ -53,7 +47,7 @@ def compose_layers(layers):
     return f
 
 
-def shallow_autoencoder(snapshot_shape, batch_size, output_dims, lambda_, sizes=(40,25,15)):
+def shallow_autoencoder(snapshot_shape, output_dims, lambda_, sizes=(40,25,15)):
     """
     Create a shallow autoencoder model
     Args:
@@ -66,30 +60,29 @@ def shallow_autoencoder(snapshot_shape, batch_size, output_dims, lambda_, sizes=
         encoder, dynamics, decoder: callable composed layers (see compose_layers)
     """
     # add channels
-    batch_shape = (batch_size,) + snapshot_shape
-    inpt = Input(batch_shape=batch_shape)
+    inpt = Input(snapshot_shape)
     print("Autoencoder Input shape:", inpt.shape)
 
     large, medium, small = sizes
 
     # Encoder --------------------------------------
-    encoder_layers = make_fc_block(large)
-    encoder_layers += make_fc_block(medium)
-    encoder_layers += make_fc_block(small, activate=False, batchnorm=True)
+    encoder_layers = make_fc_block(large, name="enc1")
+    encoder_layers += make_fc_block(medium, name="enc2")
+    encoder_layers += make_fc_block(small, activate=False, batchnorm=True, name="enc3")
 
     encoder = compose_layers(encoder_layers)
     encoded_output = encoder(inpt)
 
     # Dynamics -------------------------------------
-    dynamics_layers = make_fc_block(small, activate=False)
+    dynamics_layers = make_fc_block(small, activate=False, name="dyn1")
 
     dynamics = compose_layers(dynamics_layers)
     dynamics_output = dynamics(encoded_output)
 
     # Decoder --------------------------------------
-    decoder_layers = make_fc_block(medium)
-    decoder_layers += make_fc_block(large)
-    decoder_layers += make_fc_block(output_dims, activate=False)
+    decoder_layers = make_fc_block(medium, name="dec1")
+    decoder_layers += make_fc_block(large, name="dec2")
+    decoder_layers += make_fc_block(output_dims, activate=False, name="dec3")
 
     decoder = compose_layers(decoder_layers)
     output = decoder(dynamics_output)
@@ -99,8 +92,8 @@ def shallow_autoencoder(snapshot_shape, batch_size, output_dims, lambda_, sizes=
 
     # regularize inverse property of encoder-decoder
     model.add_loss(
-        losses=inverse_reg(inpt, batch_size, encoder, decoder, lambda_=lambda_),
-        inputs=[inpt, encoder, decoder]
+        losses=inverse_reg(inpt, encoder, decoder, lambda_=lambda_),
+        inputs=[inpt, encoded_output, output]
     )
 
     return model, encoder, dynamics, decoder

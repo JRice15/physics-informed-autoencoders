@@ -28,7 +28,6 @@ datashape = X[0].shape
 # Create Model
 models = shallow_autoencoder(
     snapshot_shape=datashape,
-    batch_size=batch_size,
     output_dims=datashape[-1],
     lambda_=lambda_,
 )
@@ -46,6 +45,8 @@ Xtest = Xtest[1:]
 callbacks = []
 callbacks.append(ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=15, min_lr=0.00005))
 callbacks.append(ModelCheckpoint("weights/test.hdf5", save_best_only=True, verbose=1))
+
+print(X.shape, Y.shape)
 
 history = autoencoder.fit(
     x=X, y=Y,

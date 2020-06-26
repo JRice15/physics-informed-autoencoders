@@ -8,7 +8,7 @@ import jax
 import scipy
 
 
-def inverse_reg(x, batch_size, encoder, decoder, lambda_):
+def inverse_reg(x, encoder, decoder, lambda_):
     """
     regularizer to enforce that the decoder is the inverse of the encoder. 
     Equation 9 per Erichson et al.  
