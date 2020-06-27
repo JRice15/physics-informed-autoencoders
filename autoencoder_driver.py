@@ -13,7 +13,8 @@ from keras.optimizers import Adam
 from keras import metrics
 
 from read_dataset import *
-from shallow_autoencoder import *
+from shallow_autoencoder import shallow_autoencoder
+
 
 class Defaults:
     """
@@ -23,7 +24,7 @@ class Defaults:
     epochs = 4000
     batchsize = 34
     lambda_ = 3 # inverse regularizer weight
-    kappa = 0.1 # stability regularizer weight
+    kappa = 0.2 # stability regularizer weight
     gamma = 4 # stability regularizer steepness
     sizes=(40,25,15)
 

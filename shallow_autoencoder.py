@@ -12,7 +12,7 @@ from keras.layers import (Activation, Add, BatchNormalization, Concatenate,
 from keras.models import Model
 from keras.activations import tanh
 
-from regularizers import inverse_reg, LyapunovStableDense
+from regularizers import *
 
 class ComposedLayers():
     """
@@ -73,7 +73,10 @@ def shallow_autoencoder(snapshot_shape, output_dims, lambda_, kappa, gamma,
         kappa (float): weighting factor for stability regularizer
         sizes (tuple of int): depth of layers in decreasing order of size. default (40,25,15)
     Returns:
-        Keras Model for full autoencoder
+        full: Keras Model for full autoencoder
+        encoder: ComposedLayers
+        dynamics: Layer
+        decoder: ComposedLayers
     """
     # add channels
     inpt = Input(snapshot_shape)
@@ -81,7 +84,7 @@ def shallow_autoencoder(snapshot_shape, output_dims, lambda_, kappa, gamma,
 
     large, medium, small = sizes
 
-    # Encoder --------------------------------------
+    #--------------------------- Encoder --------------------------------------
     encoder_layers = make_fc_block(large, name="enc1")
     encoder_layers += make_fc_block(medium, name="enc2")
     encoder_layers += make_fc_block(small, activate=False, batchnorm=True, name="enc3")
@@ -89,18 +92,13 @@ def shallow_autoencoder(snapshot_shape, output_dims, lambda_, kappa, gamma,
     encoder = ComposedLayers(encoder_layers)
     encoded_output = encoder(inpt)
 
-    # Dynamics -------------------------------------
-    # this class regularizes the stability of the dynamics operation
-    if not no_stability:
-        dynamics = LyapunovStableDense(kappa=kappa, gamma=gamma, units=small,
-            kernel_initializer=glorot_normal(), bias_initializer=zeros(),
-            name="lyapunovstable-dynamics-dense")
-    else:
-        dynamics = Dense(small, kernel_initializer=glorot_normal(), 
-            bias_initializer=zeros(), name="dynamics-dense")
+    #--------------------------- Dynamics -------------------------------------
+    dynamics = LyapunovStableDense(kappa, gamma, units=small, 
+        kernel_initializer=glorot_normal(), bias_initializer=zeros(),
+        name="lyapunovstable-dynamics-dense")
     dynamics_output = dynamics(encoded_output)
 
-    # Decoder --------------------------------------
+    #--------------------------- Decoder --------------------------------------
     decoder_layers = make_fc_block(medium, name="dec1")
     decoder_layers += make_fc_block(large, name="dec2")
     decoder_layers += make_fc_block(output_dims, activate=False, name="dec3")
@@ -108,15 +106,27 @@ def shallow_autoencoder(snapshot_shape, output_dims, lambda_, kappa, gamma,
     decoder = ComposedLayers(decoder_layers)
     output = decoder(dynamics_output)
 
-    # Create full model ----------------------------
+    #--------------------------- Full Model -----------------------------------
     model = Model(inpt, output)
 
-    # regularize inverse property of encoder-decoder
-    inv_loss = inverse_reg(inpt, encoder, decoder, lambda_=lambda_)
-    model.add_loss(inv_loss)
-    model.add_metric(inv_loss, "inv_loss")
+    #--------------------------- Regularization -------------------------------
+    # # regularize lyapunov stability
+    # if not no_stability:
+    #     stability_loss = lyapunov_stability_reg(dynamics, small, gamma=gamma)
+    #     model.add_metric(stability_loss, "stability_loss")
+    # else:
+    #     stability_loss = 0
+
+    # inverse property of encoder-decoder
+    # inv_loss = inverse_reg(inpt, encoder, decoder)
+
+    # total_reg_loss = (lambda_ * inv_loss) + (kappa * stability_loss)
+    # model.add_loss(inv_loss)
+
+    # model.add_metric(inv_loss, "inv_loss")
 
     return model
+
 
 
 
