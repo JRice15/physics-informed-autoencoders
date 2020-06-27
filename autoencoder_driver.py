@@ -1,5 +1,7 @@
 import os
 import argparse
+import json
+import re
 
 import keras.backend as K
 import numpy as np
@@ -40,13 +42,25 @@ parser.add_argument("--no-stability",action="store_true",default=False,help="use
 parser.add_argument("--s1",type=int,default=Defaults.sizes[0],help="first encoder layer output width")
 parser.add_argument("--s2",type=int,default=Defaults.sizes[1],help="second encoder layer output width")
 parser.add_argument("--s3",type=int,default=Defaults.sizes[2],help="third encoder layer output width")
-
+parser.add_argument("--save",default=None,metavar="FILENAME",help="save these hyperparameters to a file, which will be placed in the 'presets/' directory")
+parser.add_argument("--load",default=None,metavar="FILENAME",help="load hyperparameters from a file in the 'presets/'")
 args = parser.parse_args()
 
-print(args.__dict__)
+for k,v in args.__dict__.items():
+    if v is not None:
+        print("    " + k + ":", v)
 
 os.makedirs("data", exist_ok=True)
 os.makedirs("weights", exist_ok=True)
+if args.save is not None:
+    os.makedirs("presets", exist_ok=True)
+    path = "presets/" + re.sub(r"[^-_A-Za-z0-9]", "", args.save) + ".json"
+    with open(path, "w") as f:
+        json.dump(args.__dict__, f, indent=2)
+elif args.load is not None:
+    path = "presets/" + re.sub(r"[^-_A-Za-z0-9]", "", args.load) + ".json"
+    with open(path, "r") as f:
+        args.__dict__ = json.load(f)
 
 # Read Data
 X, Xtest = data_from_name("flow_cylinder")
