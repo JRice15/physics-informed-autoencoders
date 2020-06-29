@@ -71,7 +71,7 @@ X, Xtest = data_from_name("flow_cylinder")
 datashape = X[0].shape
 
 # Create Model
-autoencoder, inv_loss, stability_loss = shallow_autoencoder(
+autoencoder = shallow_autoencoder(
     snapshot_shape=datashape,
     output_dims=datashape[-1],
     kappa=args.kappa,
@@ -81,14 +81,8 @@ autoencoder, inv_loss, stability_loss = shallow_autoencoder(
     sizes=(args.s1, args.s2, args.s3)
 )
 
-# def stability_metric(a,b):
-#     return stability_loss
-# def inv_metric(a, b):
-#     return inv_loss
-
 optimizer = Adam(args.lr)
-autoencoder.compile(optimizer=optimizer, loss=mse, 
-    metrics=[metrics.MeanSquaredError()])
+autoencoder.compile(optimizer=optimizer, loss=mse, metrics=[metrics.MeanSquaredError()])
     # experimental_run_tf_function=False)
 
 

@@ -4,28 +4,41 @@ import keras.backend as K
 import numpy as np
 import tensorflow as tf
 from keras.activations import tanh
-from keras.initializers import glorot_normal, zeros
+from keras.initializers import glorot_normal, zeros, GlorotNormal
 from keras.models import Model
+from keras import Input
 from keras.layers import Layer, Dense
 
 
-class LyapunovStableDense(Dense):
+class SymmetricGlororNormal(GlorotNormal):
 
-    def __init__(self, kappa, gamma=4, *args, **kwargs):
+    def __call__(self, shape, dtype=None):
+        kernel = super().__call__(shape, dtype).numpy()
+        assert len(shape) == 2 and shape[0] == shape[1]
+        for r in range(int(shape[0])):
+            for c in range(int(shape[1])):
+                if c < r:
+                    kernel[r][c] = kernel[c][r]
+        return kernel
+
+
+class LyapunovStableDense(Dense):
+    """
+    Dense layer with optional Lyapunov stability regularization
+    Args:
+        kappa, gamma: regularization hyperparams
+        no_stab (bool): whether to have no stability regularization
+    """
+
+    def __init__(self, kappa, gamma=4, no_stab=False, *args, **kwargs):
+        if not no_stab:
+            kwargs["kernel_regularizer"] = self.lyapunov_stability_reg()
         super().__init__(*args, 
-            kernel_initializer=glorot_normal(),
+            kernel_initializer=SymmetricGlororNormal(),
             bias_initializer=zeros(),
-            kernel_regularizer=get_lyapunov_stability_regularizer(kwargs["units"], kappa, gamma),
             **kwargs)
         self.kappa = kappa
         self.gamma = gamma
-
-    def __call__(self, inputs):
-        outputs = super().__call__(inputs)
-        # stability_loss = self.lyapunov_stability_reg()
-        # self.add_loss(stability_loss)
-        # self.add_metric(stability_loss, "stability_loss")
-        return outputs
 
     def lyapunov_stability_reg(self):
         """
@@ -40,10 +53,6 @@ class LyapunovStableDense(Dense):
             """
             regularizer that accepts weight kernel and returns loss
             """
-            loss = self.kappa * K.mean(K.square(omega))
-            self.add_metric(value=loss, name="testmet", aggregation="mean")
-            return loss
-
             # solve discrete lyapunov equation for P
             omegaT = tf.transpose(omega)
             omegaT = tf.linalg.LinearOperatorFullMatrix(omegaT)
@@ -56,13 +65,16 @@ class LyapunovStableDense(Dense):
 
             # calculate eigenvalues of P
             eigvalues, eigvectors = tf.linalg.eigh(P)
+            # eigvalues = tf.cast(eigvalues, tf.float32)
 
             # calculate loss
             prior = tf.exp((eigvalues - 1) / self.gamma)
             prior = tf.where(eigvalues < 0, prior, tf.zeros(prior.shape))
-            loss = tf.reduce_sum(prior)
+            loss = self.kappa * tf.reduce_sum(prior)
             
-            return self.kappa * loss
+            self.add_metric(value=loss, name="stability", aggregation='mean')
+
+            return loss
         
         return stability_regularizer
 
@@ -97,40 +109,6 @@ def vec(X):
     x = tf.concat(x, axis=0)
     return x
 
-
-def get_lyapunov_stability_regularizer(size, kappa, gamma=4):
-    """
-    regularizes stability via eigenvalues of P matrix from Equation 21
-    Args:
-        layer: Layer
-        size: number n that is the size of the n*n weights in the dynamics layer
-        kappa: weighting hyperparameter for this loss term
-        gamma: hyperparameter, divisor in loss term exponent, default 4
-    """
-    def stability_regularizer(omega):
-        return kappa * K.mean(K.square(omega))
-
-        # solve discrete lyapunov equation for P
-        omegaT = tf.transpose(omega)
-        omegaT = tf.linalg.LinearOperatorFullMatrix(omegaT)
-        kron = tf.linalg.LinearOperatorKronecker([omegaT, omegaT])
-        kron = kron.add_to_tensor( -tf.eye(kron.shape[-1]) )
-        pseudinv = tf.linalg.pinv(kron) # tf.linalg.pinv requires tf version != 2.0
-        Ivec = vec(tf.eye(tf.sqrt(tf.cast(pseudinv.shape[-1], tf.float32))))
-        Pvec = tf.linalg.matvec(pseudinv, Ivec)
-        P = unvec(Pvec, size)
-
-        # calculate eigenvalues of P
-        eigvalues, eigvectors = tf.linalg.eigh(P)
-
-        # calculate loss
-        prior = tf.exp((eigvalues - 1) / gamma)
-        prior = tf.where(eigvalues < 0, prior, tf.zeros(prior.shape))
-        loss = tf.reduce_sum(prior)
-        
-        return kappa * loss
-    
-    return stability_regularizer
 
 
 

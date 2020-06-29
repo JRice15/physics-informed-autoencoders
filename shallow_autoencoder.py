@@ -93,8 +93,8 @@ def shallow_autoencoder(snapshot_shape, output_dims, lambda_, kappa, gamma,
     encoded_output = encoder(inpt)
 
     #--------------------------- Dynamics -------------------------------------
-    dynamics = LyapunovStableDense(kappa=kappa, gamma=gamma, units=small,
-        name="lyapunovstable-dynamics")
+    dynamics = LyapunovStableDense(kappa=kappa, gamma=gamma, no_stab=no_stability,
+        units=small, name="lyapunovstable-dynamics")
     dynamics_output = dynamics(encoded_output)
 
     #--------------------------- Decoder --------------------------------------
@@ -109,22 +109,13 @@ def shallow_autoencoder(snapshot_shape, output_dims, lambda_, kappa, gamma,
     model = Model(inpt, output)
 
     #--------------------------- Regularization -------------------------------
-
-    # regularize lyapunov stability
-    if not no_stability:
-        stability_loss = kappa * lyapunov_stability_reg(dynamics, small, gamma=gamma)
-        # model.add_metric(stability_loss, "stability_loss")
-    else:
-        stability_loss = 0
-
     # inverse property of encoder-decoder
     inv_loss = lambda_ * inverse_reg(inpt, encoder, decoder)
 
     model.add_loss(inv_loss)
-    model.add_metric(inv_loss, name="inv_loss", aggregation='mean')
-    # model.add_metric(stability_loss, name="stability_loss", aggregation='mean')
+    model.add_metric(inv_loss, name="inverse", aggregation='mean')
 
-    return model, inv_loss, stability_loss
+    return model
 
 
 
