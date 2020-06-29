@@ -12,15 +12,19 @@ from keras.layers import Layer, Dense
 class LyapunovStableDense(Dense):
 
     def __init__(self, kappa, gamma=4, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, 
+            kernel_initializer=glorot_normal(),
+            bias_initializer=zeros(),
+            kernel_regularizer=get_lyapunov_stability_regularizer(kwargs["units"], kappa, gamma),
+            **kwargs)
         self.kappa = kappa
         self.gamma = gamma
 
     def __call__(self, inputs):
         outputs = super().__call__(inputs)
-        stability_loss = self.lyapunov_stability_reg()
-        self.add_loss(stability_loss)
-        self.add_metric(stability_loss, "stability_loss")
+        # stability_loss = self.lyapunov_stability_reg()
+        # self.add_loss(stability_loss)
+        # self.add_metric(stability_loss, "stability_loss")
         return outputs
 
     def lyapunov_stability_reg(self):
@@ -32,32 +36,35 @@ class LyapunovStableDense(Dense):
             kappa: weighting hyperparameter for this loss term
             gamma: hyperparameter, divisor in loss term exponent, default 4
         """
-        # get weight matrix
-        omega = self.kernel
+        def stability_regularizer(omega):
+            """
+            regularizer that accepts weight kernel and returns loss
+            """
+            loss = self.kappa * K.mean(K.square(omega))
+            self.add_metric(value=loss, name="testmet", aggregation="mean")
+            return loss
 
-        # solve lyapunov equation for P
-        omegaT = tf.transpose(omega)
-        omegaT = tf.linalg.LinearOperatorFullMatrix(omegaT)
-        kron = tf.linalg.LinearOperatorKronecker([omegaT, omegaT])
-        kron = kron.add_to_tensor( -tf.eye(kron.shape[-1]) )
-        # pinv requires tf version != 2.0
-        pseudinv = tf.linalg.pinv(kron)
-        Ivec = vec(tf.eye(tf.sqrt(tf.cast(pseudinv.shape[-1], tf.float32))))
-        print("Ivec shape:", Ivec.shape)
-        Pvec = tf.linalg.matvec(pseudinv, Ivec)
-        print("Pvec shape:", Pvec.shape)
-        P = unvec(Pvec, self.units)
-        print("P shape:", P.shape)
+            # solve discrete lyapunov equation for P
+            omegaT = tf.transpose(omega)
+            omegaT = tf.linalg.LinearOperatorFullMatrix(omegaT)
+            kron = tf.linalg.LinearOperatorKronecker([omegaT, omegaT])
+            kron = kron.add_to_tensor( -tf.eye(kron.shape[-1]) )
+            pseudinv = tf.linalg.pinv(kron) # tf.linalg.pinv requires tf version != 2.0
+            Ivec = vec(tf.eye(tf.sqrt(tf.cast(pseudinv.shape[-1], tf.float32))))
+            Pvec = tf.linalg.matvec(pseudinv, Ivec)
+            P = unvec(Pvec, self.units)
 
-        # calculate eigenvalues of P
-        eigvalues, eigvectors = tf.linalg.eigh(P)
+            # calculate eigenvalues of P
+            eigvalues, eigvectors = tf.linalg.eigh(P)
 
-        # calculate loss
-        prior = tf.exp((eigvalues - 1) / self.gamma)
-        prior = tf.where(eigvalues < 0, prior, tf.zeros(prior.shape))
-        loss = self.kappa * tf.reduce_sum(prior)
+            # calculate loss
+            prior = tf.exp((eigvalues - 1) / self.gamma)
+            prior = tf.where(eigvalues < 0, prior, tf.zeros(prior.shape))
+            loss = tf.reduce_sum(prior)
+            
+            return self.kappa * loss
         
-        return loss
+        return stability_regularizer
 
 
 def inverse_reg(x, encoder, decoder):
@@ -91,37 +98,39 @@ def vec(X):
     return x
 
 
-# def lyapunov_stability_reg(layer, size, gamma=4):
-#     """
-#     regularizes stability via eigenvalues of P matrix from Equation 21
-#     Args:
-#         layer: Layer
-#         size: number n that is the size of the n*n weights in the dynamics layer
-#         kappa: weighting hyperparameter for this loss term
-#         gamma: hyperparameter, divisor in loss term exponent, default 4
-#     """
-#     # get weight matrix (bias is index 1)
-#     omega = layer.weights[0]
+def get_lyapunov_stability_regularizer(size, kappa, gamma=4):
+    """
+    regularizes stability via eigenvalues of P matrix from Equation 21
+    Args:
+        layer: Layer
+        size: number n that is the size of the n*n weights in the dynamics layer
+        kappa: weighting hyperparameter for this loss term
+        gamma: hyperparameter, divisor in loss term exponent, default 4
+    """
+    def stability_regularizer(omega):
+        return kappa * K.mean(K.square(omega))
 
-#     # solve discrete lyapunov equation for P
-#     omegaT = tf.transpose(omega)
-#     omegaT = tf.linalg.LinearOperatorFullMatrix(omegaT)
-#     kron = tf.linalg.LinearOperatorKronecker([omegaT, omegaT])
-#     kron = kron.add_to_tensor( -tf.eye(kron.shape[-1]) )
-#     pseudinv = tf.linalg.pinv(kron) # tf.linalg.pinv requires tf version != 2.0
-#     Ivec = vec(tf.eye(tf.sqrt(tf.cast(pseudinv.shape[-1], tf.float32))))
-#     Pvec = tf.linalg.matvec(pseudinv, Ivec)
-#     P = unvec(Pvec, size)
+        # solve discrete lyapunov equation for P
+        omegaT = tf.transpose(omega)
+        omegaT = tf.linalg.LinearOperatorFullMatrix(omegaT)
+        kron = tf.linalg.LinearOperatorKronecker([omegaT, omegaT])
+        kron = kron.add_to_tensor( -tf.eye(kron.shape[-1]) )
+        pseudinv = tf.linalg.pinv(kron) # tf.linalg.pinv requires tf version != 2.0
+        Ivec = vec(tf.eye(tf.sqrt(tf.cast(pseudinv.shape[-1], tf.float32))))
+        Pvec = tf.linalg.matvec(pseudinv, Ivec)
+        P = unvec(Pvec, size)
 
-#     # calculate eigenvalues of P
-#     eigvalues, eigvectors = tf.linalg.eigh(P)
+        # calculate eigenvalues of P
+        eigvalues, eigvectors = tf.linalg.eigh(P)
 
-#     # calculate loss
-#     prior = tf.exp((eigvalues - 1) / gamma)
-#     prior = tf.where(eigvalues < 0, prior, tf.zeros(prior.shape))
-#     loss = tf.reduce_sum(prior)
+        # calculate loss
+        prior = tf.exp((eigvalues - 1) / gamma)
+        prior = tf.where(eigvalues < 0, prior, tf.zeros(prior.shape))
+        loss = tf.reduce_sum(prior)
+        
+        return kappa * loss
     
-#     return loss
+    return stability_regularizer
 
 
 

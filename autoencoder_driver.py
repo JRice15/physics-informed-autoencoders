@@ -3,9 +3,9 @@ import argparse
 import json
 import re
 
+import tensorflow as tf
 import keras.backend as K
 import numpy as np
-import tensorflow as tf
 from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau
 from keras.losses import mse
 from keras.models import Model
@@ -26,7 +26,8 @@ class Defaults:
     lambda_ = 3 # inverse regularizer weight
     kappa = 0.2 # stability regularizer weight
     gamma = 4 # stability regularizer steepness
-    sizes=(40,25,15)
+    sizes=(40,25,15) # largest to smallest
+
 
 parser = argparse.ArgumentParser(description="see Erichson et al's 'PHYSICS-INFORMED "
     "AUTOENCODERS FOR LYAPUNOV-STABLE FLUID FLOW PREDICTION' for context of "
@@ -47,12 +48,14 @@ parser.add_argument("--save",default=None,metavar="FILENAME",help="save these hy
 parser.add_argument("--load",default=None,metavar="FILENAME",help="load hyperparameters from a file in the 'presets/'")
 args = parser.parse_args()
 
+# echo args
 for k,v in args.__dict__.items():
     if v is not None:
         print("    " + k + ":", v)
 
 os.makedirs("data", exist_ok=True)
 os.makedirs("weights", exist_ok=True)
+# allow hyperparamater saving/loading
 if args.save is not None:
     os.makedirs("presets", exist_ok=True)
     path = "presets/" + re.sub(r"[^-_A-Za-z0-9]", "", args.save) + ".json"
@@ -68,7 +71,7 @@ X, Xtest = data_from_name("flow_cylinder")
 datashape = X[0].shape
 
 # Create Model
-autoencoder = shallow_autoencoder(
+autoencoder, inv_loss, stability_loss = shallow_autoencoder(
     snapshot_shape=datashape,
     output_dims=datashape[-1],
     kappa=args.kappa,
@@ -77,8 +80,23 @@ autoencoder = shallow_autoencoder(
     no_stability=args.no_stability,
     sizes=(args.s1, args.s2, args.s3)
 )
+
+# def stability_metric(a,b):
+#     return stability_loss
+# def inv_metric(a, b):
+#     return inv_loss
+
 optimizer = Adam(args.lr)
-autoencoder.compile(optimizer=optimizer, loss=mse, metrics=[metrics.MeanSquaredError()])
+autoencoder.compile(optimizer=optimizer, loss=mse, 
+    metrics=[metrics.MeanSquaredError()])
+    # experimental_run_tf_function=False)
+
+
+
+# autoencoder._metrics.append(stability_loss)
+# autoencoder.metrics_names.append("stability_loss")
+# autoencoder._metrics.append(inv_loss)
+# autoencoder.metrics_names.append("inv_loss")
 
 # targets are one timestep ahead of inputs
 Y = X[:-1]
@@ -95,7 +113,7 @@ weights_path += ".hdf5"
 
 callbacks = []
 callbacks.append(ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=50, min_lr=(args.lr / 16), verbose=1))
-callbacks.append(ModelCheckpoint(weights_path, save_best_only=True, verbose=1))
+callbacks.append(ModelCheckpoint(weights_path, save_best_only=True, verbose=1, period=5))
 
 print(X.shape, Y.shape)
 
