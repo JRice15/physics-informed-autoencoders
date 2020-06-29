@@ -28,7 +28,7 @@ class Defaults:
     epochs = 4000
     batchsize = 34
     lambda_ = 3 # inverse regularizer weight
-    kappa = 0.2 # stability regularizer weight
+    kappa = 1 # stability regularizer weight
     gamma = 4 # stability regularizer steepness
     sizes=(40,25,15) # largest to smallest
 
@@ -85,7 +85,10 @@ autoencoder = shallow_autoencoder(
     sizes=(args.s1, args.s2, args.s3)
 )
 
-optimizer = Adam(args.lr)
+optimizer = Adam(
+    learning_rate=args.lr, 
+    # clipvalue=5.0,
+)
 autoencoder.compile(optimizer=optimizer, loss=mse, metrics=[metrics.MeanSquaredError()])
     # experimental_run_tf_function=False)
 

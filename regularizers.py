@@ -34,7 +34,7 @@ class LyapunovStableDense(Dense):
         if not no_stab:
             kwargs["kernel_regularizer"] = self.lyapunov_stability_reg()
         super().__init__(*args, 
-            kernel_initializer=SymmetricGlorotNormal(),
+            kernel_initializer=glorot_normal(),
             bias_initializer=zeros(),
             **kwargs)
         self.kappa = kappa
@@ -53,6 +53,10 @@ class LyapunovStableDense(Dense):
             """
             regularizer that accepts weight kernel and returns loss
             """
+            # tf.print("\nomega nan:", tf.math.reduce_any(tf.math.is_nan(omega)),
+            #     "omega inf:", tf.math.reduce_any(tf.math.is_inf(omega)))
+            # tf.print("mean:", K.mean(omega), "max:", K.max(omega), "min:", K.min(omega))
+
             # solve discrete lyapunov equation for P
             omegaT = tf.transpose(omega)
             omegaT = tf.linalg.LinearOperatorFullMatrix(omegaT)
@@ -63,18 +67,25 @@ class LyapunovStableDense(Dense):
             Pvec = tf.linalg.matvec(pseudinv, neg_Ivec)
             P = unvec(Pvec, self.units)
 
-            tf.print("nan:", tf.math.reduce_any(tf.math.is_nan(P)))
-            tf.print("inf:", tf.math.reduce_any(tf.math.is_inf(P)))
+            # tf.print("kron nan:", tf.math.reduce_any(tf.math.is_nan(kron)),
+            #     "pseudinv nan:", tf.math.reduce_any(tf.math.is_nan(pseudinv)),
+            #     "negIvec nan:", tf.math.reduce_any(tf.math.is_nan(neg_Ivec)),
+            #     "Pvec nan:", tf.math.reduce_any(tf.math.is_nan(Pvec)),
+            #     "P nan:", tf.math.reduce_any(tf.math.is_nan(P)))
 
             # calculate eigenvalues of P
             eigvalues, eigvectors = tf.linalg.eigh(P)
             # eigvalues = tf.cast(eigvalues, tf.float32)
 
             # calculate loss
-            prior = tf.exp((eigvalues - 1) / self.gamma)
-            prior = tf.where(eigvalues < 0, prior, tf.zeros(prior.shape))
+            neg_eigvalues = tf.gather(eigvalues, tf.where(eigvalues < 0))
+            prior = tf.exp((neg_eigvalues - 1) / self.gamma)
             loss = self.kappa * tf.reduce_sum(prior)
             
+            # tf.print("prior nan:", tf.math.reduce_any(tf.math.is_nan(prior)),
+            #     "loss nan:", tf.math.reduce_any(tf.math.is_nan(loss)))
+            # tf.print("loss:", loss)
+
             self.add_metric(value=loss, name="stability", aggregation='mean')
 
             return loss
