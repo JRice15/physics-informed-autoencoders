@@ -10,7 +10,7 @@ from keras import Input
 from keras.layers import Layer, Dense
 
 
-class SymmetricGlororNormal(GlorotNormal):
+class SymmetricGlorotNormal(GlorotNormal):
 
     def __call__(self, shape, dtype=None):
         kernel = super().__call__(shape, dtype).numpy()
@@ -34,7 +34,7 @@ class LyapunovStableDense(Dense):
         if not no_stab:
             kwargs["kernel_regularizer"] = self.lyapunov_stability_reg()
         super().__init__(*args, 
-            kernel_initializer=SymmetricGlororNormal(),
+            kernel_initializer=SymmetricGlorotNormal(),
             bias_initializer=zeros(),
             **kwargs)
         self.kappa = kappa
@@ -56,12 +56,15 @@ class LyapunovStableDense(Dense):
             # solve discrete lyapunov equation for P
             omegaT = tf.transpose(omega)
             omegaT = tf.linalg.LinearOperatorFullMatrix(omegaT)
-            kron = tf.linalg.LinearOperatorKronecker([omegaT, omegaT])
+            kron = tf.linalg.LinearOperatorKronecker([omegaT, omegaT], is_square=True)
             kron = kron.add_to_tensor( -tf.eye(kron.shape[-1]) )
-            pseudinv = tf.linalg.pinv(kron) # tf.linalg.pinv requires tf version != 2.0
-            Ivec = vec(tf.eye(tf.sqrt(tf.cast(pseudinv.shape[-1], tf.float32))))
-            Pvec = tf.linalg.matvec(pseudinv, Ivec)
+            pseudinv = tf.linalg.pinv(kron, validate_args=True) # tf.linalg.pinv requires tf version != 2.0
+            neg_Ivec = vec( -tf.eye(self.units) )
+            Pvec = tf.linalg.matvec(pseudinv, neg_Ivec)
             P = unvec(Pvec, self.units)
+
+            tf.print("nan:", tf.math.reduce_any(tf.math.is_nan(P)))
+            tf.print("inf:", tf.math.reduce_any(tf.math.is_inf(P)))
 
             # calculate eigenvalues of P
             eigvalues, eigvectors = tf.linalg.eigh(P)
@@ -77,6 +80,8 @@ class LyapunovStableDense(Dense):
             return loss
         
         return stability_regularizer
+
+
 
 
 def inverse_reg(x, encoder, decoder):
