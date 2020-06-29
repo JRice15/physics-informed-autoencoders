@@ -1,19 +1,23 @@
-import os
 import argparse
 import json
+import os
 import re
 
-import tensorflow as tf
+import keras
 import keras.backend as K
 import numpy as np
+import tensorflow as tf
+from keras import metrics
 from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau
 from keras.losses import mse
 from keras.models import Model
 from keras.optimizers import Adam
-from keras import metrics
 
 from read_dataset import *
 from shallow_autoencoder import shallow_autoencoder
+
+print("Tensorflow version:", tf.__version__) # 2.2.0
+print("Keras version:", keras.__version__) # 2.4.3
 
 
 class Defaults:
