@@ -8,7 +8,7 @@ import keras.backend as K
 import numpy as np
 import tensorflow as tf
 from keras import metrics
-from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau
+from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau, TensorBoard
 from keras.losses import mse
 from keras.models import Model
 from keras.optimizers import Adam
@@ -59,6 +59,7 @@ for k,v in args.__dict__.items():
 
 os.makedirs("data", exist_ok=True)
 os.makedirs("weights", exist_ok=True)
+os.makedirs("logs", exist_ok=True)
 # allow hyperparamater saving/loading
 if args.save is not None:
     os.makedirs("presets", exist_ok=True)
@@ -93,12 +94,6 @@ autoencoder.compile(optimizer=optimizer, loss=mse, metrics=[metrics.MeanSquaredE
     # experimental_run_tf_function=False)
 
 
-
-# autoencoder._metrics.append(stability_loss)
-# autoencoder.metrics_names.append("stability_loss")
-# autoencoder._metrics.append(inv_loss)
-# autoencoder.metrics_names.append("inv_loss")
-
 # targets are one timestep ahead of inputs
 Y = X[:-1]
 X = X[1:]
@@ -112,11 +107,16 @@ if args.no_stability:
     weights_path += ".nostability"
 weights_path += ".hdf5"
 
-callbacks = []
-callbacks.append(ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=50, min_lr=(args.lr / 16), verbose=1))
-callbacks.append(ModelCheckpoint(weights_path, save_best_only=True, verbose=1, period=5))
+callbacks = [
+    ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=50, 
+        min_lr=(args.lr / 16), verbose=1),
+    ModelCheckpoint(weights_path, save_best_only=True, verbose=1, period=20),
+    TensorBoard(histogram_freq=100, write_graph=True, write_images=True, 
+        update_freq=(args.batchsize * 20), embeddings_freq=100),
+]
 
-print(X.shape, Y.shape)
+print("X shape:", X.shape)
+print("Y shape:", Y.shape)
 
 history = autoencoder.fit(
     x=X, y=Y,
