@@ -2,6 +2,7 @@ import argparse
 import json
 import os
 import re
+import subprocess
 
 import keras
 import keras.backend as K
@@ -15,6 +16,7 @@ from keras.optimizers import Adam
 
 from read_dataset import *
 from shallow_autoencoder import shallow_autoencoder
+from output_results import *
 
 print("Tensorflow version:", tf.__version__) # 2.2.0
 print("Keras version:", keras.__version__) # 2.4.3
@@ -30,7 +32,7 @@ class Defaults:
     lambda_ = 3 # inverse regularizer weight
     kappa = 1 # stability regularizer weight
     gamma = 4 # stability regularizer steepness
-    sizes=(40,25,15) # largest to smallest
+    sizes = (40, 25, 15) # largest to smallest
 
 
 parser = argparse.ArgumentParser(description="see Erichson et al's 'PHYSICS-INFORMED "
@@ -52,14 +54,16 @@ parser.add_argument("--save",default=None,metavar="FILENAME",help="save these hy
 parser.add_argument("--load",default=None,metavar="FILENAME",help="load hyperparameters from a file in the 'presets/'")
 args = parser.parse_args()
 
+os.makedirs("data", exist_ok=True)
+os.makedirs("weights", exist_ok=True)
+os.makedirs("results", exist_ok=True)
+os.makedirs("logs", exist_ok=True)
+
 # echo args
 for k,v in args.__dict__.items():
     if v is not None:
         print("    " + k + ":", v)
 
-os.makedirs("data", exist_ok=True)
-os.makedirs("weights", exist_ok=True)
-os.makedirs("logs", exist_ok=True)
 # allow hyperparamater saving/loading
 if args.save is not None:
     os.makedirs("presets", exist_ok=True)
@@ -100,23 +104,25 @@ X = X[1:]
 Ytest = Xtest[:-1]
 Xtest = Xtest[1:]
 
-weights_path = "weights/weights"
+run_name = ""
 if args.tag is not None:
-    weights_path += "." + args.tag
+    run_name += args.tag + "."
 if args.no_stability:
-    weights_path += ".nostability"
-weights_path += ".hdf5"
+    run_name += "nostability."
+run_name += "l{}_k{}_g{}.".format(args.lambd, args.kappa, args.gamma)
+
+weights_path = "weights/weights." + run_name + "hdf5"
 
 callbacks = [
-    ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=50, 
+    ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=100, 
         min_lr=(args.lr / 16), verbose=1),
     ModelCheckpoint(weights_path, save_best_only=True, verbose=1, period=20),
     TensorBoard(histogram_freq=100, write_graph=True, write_images=True, 
         update_freq=(args.batchsize * 20), embeddings_freq=100),
+    ImgWriter(autoencoder, run_name, Xtest, Ytest),
 ]
 
-print("X shape:", X.shape)
-print("Y shape:", Y.shape)
+print("\n\n\nBegin Training")
 
 history = autoencoder.fit(
     x=X, y=Y,
@@ -126,3 +132,4 @@ history = autoencoder.fit(
     validation_data=(Xtest, Ytest),
     verbose=2,
 )
+
