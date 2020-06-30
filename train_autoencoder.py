@@ -9,7 +9,7 @@ import keras.backend as K
 import numpy as np
 import tensorflow as tf
 from keras import metrics
-from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau, TensorBoard
+from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau, TensorBoard, LearningRateScheduler
 from keras.losses import mse
 from keras.models import Model
 from keras.optimizers import Adam
@@ -27,7 +27,7 @@ class Defaults:
     namespace for defining arg defaults
     """
     lr = 0.001
-    epochs = 4000
+    epochs = 6000
     batchsize = 34
     lambda_ = 3 # inverse regularizer weight
     kappa = 1 # stability regularizer weight
@@ -98,12 +98,6 @@ autoencoder.compile(optimizer=optimizer, loss=mse, metrics=[metrics.MeanSquaredE
     # experimental_run_tf_function=False)
 
 
-# targets are one timestep ahead of inputs
-Y = X[:-1]
-X = X[1:]
-Ytest = Xtest[:-1]
-Xtest = Xtest[1:]
-
 run_name = ""
 if args.tag is not None:
     run_name += args.tag + "."
@@ -113,9 +107,26 @@ run_name += "l{}_k{}_g{}.".format(args.lambd, args.kappa, args.gamma)
 
 weights_path = "weights/weights." + run_name + "hdf5"
 
+
+# targets are one timestep ahead of inputs
+Y = X[:-1]
+X = X[1:]
+Ytest = Xtest[:-1]
+Xtest = Xtest[1:]
+
+
+def lr_schedule(epoch):
+    max_divisor = 2 ** 4
+    divisor = (2 ** (epoch // 1000))
+    new_rate = args.lr / min(divisor, max_divisor)
+    if epoch % 1000 == 0:
+        print("LearningRateScheduler setting learning rate to {}".format(new_rate))
+    return new_rate
+
 callbacks = [
-    ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=100, 
-        min_lr=(args.lr / 16), verbose=1),
+    # ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=100, 
+    #     min_lr=(args.lr / 16), verbose=1),
+    LearningRateScheduler(lr_schedule),
     ModelCheckpoint(weights_path, save_best_only=True, verbose=1, period=20),
     TensorBoard(histogram_freq=100, write_graph=True, write_images=True, 
         update_freq=(args.batchsize * 20), embeddings_freq=100),
