@@ -13,59 +13,13 @@ from keras.models import Model
 from keras.activations import tanh
 
 from regularizers import *
-
-class ComposedLayers():
-    """
-    halfway between a Layer and a Model, because Models don't allow symbolic
-    tensors as inputs, and we need to access individual Layer weights for the
-    stability regularizer
-    """
-
-    def __init__(self, layers):
-        self.layers = layers
-        self.composed = self._compose_layers(layers)
-
-    def _compose_layers(self, layers):
-        """
-        turn a list of layers into one callable, where the layers get called in 
-        the order of the list
-        """
-        if len(layers) == 0:
-            return lambda x: x
-        def f(x):
-            return layers[-1]( self._compose_layers(layers[:-1])(x) )
-        return f
-
-    def __call__(self, x):
-        return self.composed(x)
+from common import *
 
 
-
-def make_fc_block(output_dims, name, activate=True, batchnorm=False):
-    """
-    creates a fully connected layer, with optional tanh activation and batchnorm
-    Returns:
-        list of Layer
-    """
-    layers = []
-    layers.append(
-        Dense(output_dims,
-            kernel_initializer=glorot_normal(), # aka Xavier Normal
-            bias_initializer=zeros(),
-            name=name+"-dense")
-    )
-    if activate:
-        layers.append( Activation(tanh, name=name+"-tanh") )
-    if batchnorm:
-        layers.append( BatchNormalization(name=name+"-batchnorm") )
-    return layers
-
-
-
-def shallow_autoencoder(snapshot_shape, output_dims, lambda_, kappa, gamma,
+def lyapunov_autoencoder(snapshot_shape, output_dims, lambda_, kappa, gamma,
         no_stability=False, sizes=(40,25,15)):
     """
-    Create a shallow autoencoder model
+    Create a lyapunov autoencoder model
     Args:
         snapshot_shape (tuple of int): shape of snapshots, without batchsize or channels
         output_dims (int): number of output channels

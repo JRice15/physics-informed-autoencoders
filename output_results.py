@@ -77,7 +77,7 @@ def get_num_str(num):
     if num < 0.001 or num > 999:
         num = "{:.2E}".format(num)
     else:
-        num = "{:.3f}".format(num)
+        num = "{:.5f}".format(num)
     return num
 
 def save_history(H: History, run_name, marker_step=1000):

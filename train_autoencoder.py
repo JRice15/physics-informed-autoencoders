@@ -15,7 +15,7 @@ from keras.models import Model
 from keras.optimizers import Adam
 
 from read_dataset import *
-from shallow_autoencoder import shallow_autoencoder
+from lyapunov_autoencoder import lyapunov_autoencoder
 from output_results import *
 from common import *
 
@@ -64,7 +64,9 @@ if args.save is not None:
 elif args.load is not None:
     path = "presets/" + re.sub(r"[^-_A-Za-z0-9]", "", args.load) + ".json"
     with open(path, "r") as f:
-        args.__dict__ = json.load(f)
+        loaded = json.load(f)
+    args.__dict__.update(loaded)    
+
 
 # Read Data
 X, Xtest = data_from_name("flow_cylinder")
