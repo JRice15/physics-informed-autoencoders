@@ -114,7 +114,7 @@ callbacks = [
     #     min_lr=(args.lr / 16), verbose=1),
     LearningRateScheduler(lr_schedule),
     ModelCheckpoint(weights_path, save_best_only=True, verbose=1, period=20),
-    TensorBoard(histogram_freq=100, write_graph=True, write_images=True, 
+    TensorBoard(histogram_freq=100, write_graph=False, write_images=True, 
         update_freq=(args.batchsize * 20), embeddings_freq=100),
     ImgWriter(autoencoder, run_name, Xtest, Ytest),
 ]

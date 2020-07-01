@@ -32,7 +32,8 @@ class ImgWriter(Callback):
             write_im(
                 im=K.eval(result),
                 title="Epoch {} Prediction".format(epoch+1),
-                filename=self.run_name + "__pred_epoch_{}.".format(epoch+1)
+                filename=self.run_name + "__pred_epoch_{}.".format(epoch+1),
+                directory="train_results"
             )
 
 

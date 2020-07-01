@@ -4,22 +4,10 @@ import keras.backend as K
 import numpy as np
 import tensorflow as tf
 from keras.activations import tanh
-from keras.initializers import glorot_normal, zeros, GlorotNormal
+from keras.initializers import glorot_normal, zeros
 from keras.models import Model
 from keras import Input
 from keras.layers import Layer, Dense
-
-
-class SymmetricGlorotNormal(GlorotNormal):
-
-    def __call__(self, shape, dtype=None):
-        kernel = super().__call__(shape, dtype).numpy()
-        assert len(shape) == 2 and shape[0] == shape[1]
-        for r in range(int(shape[0])):
-            for c in range(int(shape[1])):
-                if c < r:
-                    kernel[r][c] = kernel[c][r]
-        return kernel
 
 
 class LyapunovStableDense(Dense):
@@ -103,9 +91,11 @@ def inverse_reg(x, encoder, decoder):
         encoder, decoder: ComposedLayers
         lambda_: weighting hyperparameter for this loss term
     """
-    q = encoder(x)
-    q_pred = encoder(decoder(q))
-    norm = tf.reduce_mean(tf.square(q - q_pred))
+    # q = encoder(x)
+    # q_pred = encoder(decoder(q))
+    # norm = tf.reduce_mean(tf.square(q - q_pred))
+    x_pred = decoder(encoder(x))
+    norm = tf.reduce_mean(tf.square(x - x_pred))
     return norm
 
 
