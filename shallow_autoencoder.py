@@ -113,9 +113,9 @@ def shallow_autoencoder(snapshot_shape, output_dims, lambda_, kappa, gamma,
     inv_loss = lambda_ * inverse_reg(inpt, encoder, decoder)
 
     model.add_loss(inv_loss)
-    model.add_metric(inv_loss, name="inverse", aggregation='mean')
+    model.add_metric(inv_loss, name="inverse_loss", aggregation='mean')
 
-    return model
+    return model, encoder, dynamics, decoder
 
 
 

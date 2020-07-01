@@ -86,7 +86,7 @@ class LyapunovStableDense(Dense):
             #     "loss nan:", tf.math.reduce_any(tf.math.is_nan(loss)))
             # tf.print("loss:", loss)
 
-            self.add_metric(value=loss, name="stability", aggregation='mean')
+            self.add_metric(value=loss, name="stability_loss", aggregation='mean')
 
             return loss
         

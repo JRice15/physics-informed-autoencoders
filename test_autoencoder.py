@@ -3,16 +3,17 @@ import json
 import os
 import re
 import shutil
+import re
 
 import keras
 import keras.backend as K
 import numpy as np
 import tensorflow as tf
-from keras import metrics
-from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau, TensorBoard, LearningRateScheduler
-from keras.losses import mse
+import matplotlib.pyplot as plt
 from keras.models import Model
-from keras.optimizers import Adam
+from keras import Input
+import tkinter as tk
+from tkinter import filedialog
 
 from read_dataset import *
 from shallow_autoencoder import shallow_autoencoder
@@ -38,30 +39,21 @@ parser.add_argument("--no-stability",action="store_true",default=False,help="use
 parser.add_argument("--s1",type=int,default=Defaults.sizes[0],help="first encoder layer output width")
 parser.add_argument("--s2",type=int,default=Defaults.sizes[1],help="second encoder layer output width")
 parser.add_argument("--s3",type=int,default=Defaults.sizes[2],help="third encoder layer output width")
-parser.add_argument("--save",default=None,metavar="FILENAME",help="save these hyperparameters to a file, which will be placed in the 'presets/' directory")
 parser.add_argument("--load",default=None,metavar="FILENAME",help="load hyperparameters from a file in the 'presets/'")
 args = parser.parse_args()
 
 os.makedirs("data", exist_ok=True)
 os.makedirs("weights", exist_ok=True)
-os.makedirs("train_results", exist_ok=True)
-if os.path.exists("logs"):
-    print("Removing old Tensorboard logs...")
-    shutil.rmtree("logs")
-os.makedirs("logs", exist_ok=True)
+os.makedirs("test_results", exist_ok=True)
+
 
 # echo args
 for k,v in args.__dict__.items():
     if v is not None:
         print("    " + k + ":", v)
 
-# allow hyperparamater saving/loading
-if args.save is not None:
-    os.makedirs("presets", exist_ok=True)
-    path = "presets/" + re.sub(r"[^-_A-Za-z0-9]", "", args.save) + ".json"
-    with open(path, "w") as f:
-        json.dump(args.__dict__, f, indent=2)
-elif args.load is not None:
+# allow hyperparamater loading
+if args.load is not None:
     path = "presets/" + re.sub(r"[^-_A-Za-z0-9]", "", args.load) + ".json"
     with open(path, "r") as f:
         args.__dict__ = json.load(f)
@@ -69,6 +61,7 @@ elif args.load is not None:
 # Read Data
 X, Xtest = data_from_name("flow_cylinder")
 datashape = X[0].shape
+data = np.concatenate([X, Xtest], axis=0)
 
 # Create Model
 models = shallow_autoencoder(
@@ -82,58 +75,77 @@ models = shallow_autoencoder(
 )
 autoencoder, encoder, dynamics, decoder = models
 
-optimizer = Adam(
-    learning_rate=args.lr, 
-    # clipvalue=5.0,
-)
-autoencoder.compile(optimizer=optimizer, loss=mse, metrics=[metrics.MeanSquaredError()])
-    # experimental_run_tf_function=False)
+def run_test(weights_path, data, name, num_steps=50):
+
+    autoencoder.load_weights(weights_path)
+
+    num_snapshots = data.shape[0]
+    data = np.reshape(data, (1, num_snapshots, -1))
+    tfdata = tf.convert_to_tensor(data)
+
+    error = []
+
+    print("\n")
+    print(weights_path)
+    for step in range(1, num_steps+1):
+        step_mse = []
+        for i in range(num_snapshots - num_steps):
+            snapshot = tfdata[:,i,:]
+
+            x = encoder(snapshot)
+            for _ in range(step):
+                x = dynamics(x)
+            pred = decoder(x).numpy()
+
+            true = data[:,i+step,:]
+            mse = np.mean((true - pred) ** 2)
+            step_mse.append(mse)
+
+            if step % 10 == 0 and i == 7:
+                write_im(pred, title=str(step) + " steps prediction", 
+                    filename=name + "_step" + str(step), directory="test_results" )
+                write_im(true, title=str(step) + " steps ground truth", 
+                    filename="truth_step" + str(step), directory="test_results")
+        
+        mean_mse = np.mean(step_mse)
+        print(step, "steps MSE:", mean_mse)
+        error.append(mean_mse)
+    
+    print("")
+    return error
 
 
 run_name = get_run_name(args)
 weights_path = "weights/weights." + run_name + ".hdf5"
 
+name1 = re.sub(r"\s", "_", input("Name for these initial weights: "))
 
-# targets are one timestep ahead of inputs
-Y = X[:-1]
-X = X[1:]
-Ytest = Xtest[:-1]
-Xtest = Xtest[1:]
+# Select weights 2
 
+yn = input("Compare to another run? [y/n]: ")
+if yn.lower().strip() == "y":
+    root = tk.Tk()
+    root.withdraw()
 
-def lr_schedule(epoch):
-    max_divisor = 5
-    divisor = epoch // 1000
-    new_rate = args.lr / (2 ** min(divisor, max_divisor))
-    if epoch % 1000 == 0:
-        print("LearningRateScheduler setting learning rate to {}".format(new_rate))
-    return new_rate
+    print("Select weights file to compare to...")
+    weights2_path = filedialog.askopenfilename(initialdir="./weights/", title="select .hdf5 weights file")
 
-callbacks = [
-    # ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=100, 
-    #     min_lr=(args.lr / 16), verbose=1),
-    LearningRateScheduler(lr_schedule),
-    ModelCheckpoint(weights_path, save_best_only=True, verbose=1, period=20),
-    TensorBoard(histogram_freq=100, write_graph=True, write_images=True, 
-        update_freq=(args.batchsize * 20), embeddings_freq=100),
-    ImgWriter(autoencoder, run_name, Xtest, Ytest),
-]
+    name2 = re.sub(r"\s", "_", input("Name for second chosen weights: "))
 
-print("\n\n\nBegin Training")
-
-H = autoencoder.fit(
-    x=X, y=Y,
-    batch_size=args.batchsize,
-    epochs=args.epochs,
-    callbacks=callbacks,
-    validation_data=(Xtest, Ytest),
-    verbose=2,
-)
-
-if 7000 >= args.epochs >= 3000:
-    marker_step = 1000
+    error1 = run_test(weights_path, data, name1)
+    error2 = run_test(weights2_path, data, name2)
+    dnames = (name1, name2)
 else:
-    marker_step = args.epochs // 6
+    error1 = run_test(weights_path, data, name1)
+    error2 = None
+    dnames = (name1,None)
 
-save_history(H, run_name, marker_step=marker_step)
 
+make_plot(data=(error1, error2), dnames=dnames, title="MSE for Multi-Step Predictions", 
+    mark=0, axlabels=("steps", "mean squared error"), legendloc="upper left",
+    marker_step=(len(error1) // 6))
+
+if dnames[1] is None:
+    plt.savefig("test_results/multistep_mse_" + dnames[0] + ".png")
+else:
+    plt.savefig("test_results/multistep_mse_" + dnames[0] + "_vs_" + dnames[1] + ".png")
