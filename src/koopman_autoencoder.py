@@ -109,7 +109,9 @@ def koopman_autoencoder(snapshot_shape, output_dims, fwd_wt, bwd_wt, id_wt,
     """
     total_inpt_snapshots = (pred_steps * 2) + 1
     inpt = Input((total_inpt_snapshots,) + snapshot_shape)
+    tf.print("inpt shape:", inpt.shape)
     current = inpt[:,pred_steps,:]
+    tf.print("current shape:", current.shape)
     print("Autoencoder Input shape:", inpt.shape, "current shape:", current.shape)
 
     intermediate, bottleneck = sizes
