@@ -14,9 +14,15 @@ from src.read_dataset import *
 
 
 class ImgWriter(Callback):
+    """
+    args:
+        freq: period of epochs to write out each image
+        epochs: total epochs
+    """
 
-    def __init__(self, model, run_name, Xtest, Ytest, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, model, run_name, Xtest, Ytest, freq=1000):
+        super().__init__()
+        self.freq = freq
         self.model = model
         self.run_name = run_name
         self.X = tf.reshape(Xtest[7], (1, -1))
@@ -26,7 +32,7 @@ class ImgWriter(Callback):
         write_im(Ytest[6], "Input Y(t)", "input", "train_results")
 
     def on_epoch_end(self, epoch, logs=None):
-        if (epoch + 1) % 1000 == 0:
+        if (epoch + 1) % self.freq == 0:
             print("Saving result image...")
             result = self.model(self.X)
             write_im(
@@ -158,7 +164,7 @@ def make_plot(xrange, data, title, axlabels, dnames=None, marker_step=1,
     plt.margins(x=0.125, y=0.1)
 
 
-def output_eigvals(weight_matrix, name, directory):
+def output_eigvals(weight_matrix, name, directory="stats", type_=None):
     try:
         weight_matrix = weight_matrix.numpy()
     except:
@@ -187,7 +193,11 @@ def output_eigvals(weight_matrix, name, directory):
     plt.plot(np.cos(t), np.sin(t), ls='-', lw=3, c = '#636363', zorder=1 )
     plt.tight_layout()
     # plt.show()
-    plt.savefig(directory + '/' + name + '__eigvals.png')
+
+    end = "__eigvals"
+    if type_ is not None:
+        end += "." + type_
+    plt.savefig(directory + '/' + name + end + '.png')
     plt.close()
 
 

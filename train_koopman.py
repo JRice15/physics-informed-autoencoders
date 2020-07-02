@@ -30,14 +30,22 @@ X, Xtest = data_from_name("flow_cylinder")
 datashape = X[0].shape
 print("datashape:", datashape)
 
-def data_gen(X, steps):
+def data_gen(X, steps, batchsize):
+    """
+    yeilds lists of length batchsize, each element as 2*steps+1 consecutive snapshots
+    """
     i = steps
+    data = []
     while True:
         if i+steps >= X.shape[0]:
             i = steps
             continue
-        print("datagen shape:", X[i-steps:i+steps+1].shape)
-        yield (X[i-steps:i+steps+1], None)
+        if len(data) == batchsize:
+            print("dg:", len(data), data[0].shape)
+            yield (data, None)
+            data = []
+        data.append( X[i-steps:i+steps+1] )
+
 
 def make_val_data(Xtest, steps):
     Xs = []
@@ -47,7 +55,7 @@ def make_val_data(Xtest, steps):
 
 
 # Create Model
-autoencoder = koopman_autoencoder(
+models = koopman_autoencoder(
     snapshot_shape=datashape,
     output_dims=datashape[-1],
     fwd_wt=args.forward,
@@ -57,6 +65,7 @@ autoencoder = koopman_autoencoder(
     pred_steps=args.pred_steps,
     sizes=args.sizes,
 )
+autoencoder, encoder, forward_dyn, backward_dyn, decoder = models
 
 optimizer = Adam(
     learning_rate=args.lr, 
@@ -83,7 +92,7 @@ callbacks = [
     #     min_lr=(args.lr / 16), verbose=1),
     LearningRateScheduler(lr_schedule),
     ModelCheckpoint(weights_path, save_best_only=True, save_weights_only=True, 
-        verbose=1, period=20),
+        verbose=1, save_freq=20),
     TensorBoard(histogram_freq=100, write_graph=False, write_images=True, 
         update_freq=(args.batchsize * 20), embeddings_freq=100),
     # ImgWriter(autoencoder, run_name, Xtest[:-1], Xtest[1:]),
@@ -92,13 +101,18 @@ callbacks = [
 print("\n\n\nBegin Training")
 
 H = autoencoder.fit(
-    x=data_gen(X, args.pred_steps),
-    batch_size=args.batchsize,
+    x=data_gen(X, args.pred_steps, args.batchsize),
+    y=None,
+    # batch_size=args.batchsize,
     epochs=args.epochs,
     callbacks=callbacks,
-    validation_data=make_val_data(Xtest, args.pred_steps),
+    # validation_data=make_val_data(Xtest, args.pred_steps),
+    # validation_split=0.2,
     verbose=2,
 )
+
+
+
 
 if 7000 >= args.epochs >= 3000:
     marker_step = 1000
@@ -106,3 +120,6 @@ else:
     marker_step = args.epochs // 6
 
 save_history(H, run_name, marker_step=marker_step)
+
+output_eigvals(forward_dyn.weights[0], run_name, type_="forward")
+output_eigvals(backward_dyn.weights[0], run_name, type_="backward")

@@ -108,7 +108,7 @@ def koopman_autoencoder(snapshot_shape, output_dims, fwd_wt, bwd_wt, id_wt,
     """
     total_inpt_snapshots = (pred_steps * 2) + 1
     inpt = Input((total_inpt_snapshots,) + snapshot_shape)
-    current = inpt[:,pred_steps]
+    current = inpt[:,pred_steps,:]
     print("Autoencoder Input shape:", inpt.shape, "current shape:", current.shape)
 
     intermediate, bottleneck = sizes
@@ -142,14 +142,22 @@ def koopman_autoencoder(snapshot_shape, output_dims, fwd_wt, bwd_wt, id_wt,
     model = Model(inputs=inpt, outputs=outputs)
 
     # Forward and Backward Dynamics Regularizers
-    bwd_loss = bwd_wt * tf.reduce_mean((inpt[:pred_steps] - outputs[:pred_steps]) ** 2)
-    fwd_loss = fwd_wt * tf.reduce_mean((inpt[pred_steps+1:] - outputs[pred_steps:]) ** 2)
+    bwd_pred = tf.stack(outputs[:pred_steps], axis=1)
+    bwd_true = inpt[:,:pred_steps,:]
+    fwd_pred = tf.stack(outputs[pred_steps:], axis=1)
+    fwd_true = inpt[:,pred_steps+1:,:]
+    print("pred shape:", fwd_pred.shape, bwd_pred.shape)
+    print("true shape:", fwd_true.shape, bwd_true.shape)
+    tf.print(fwd_true.shape)
+    bwd_loss = bwd_wt * tf.reduce_mean((bwd_true - bwd_pred) ** 2)
+    fwd_loss = fwd_wt * tf.reduce_mean((fwd_true - fwd_pred) ** 2)
     model.add_loss(bwd_loss)
     model.add_loss(fwd_loss)
     model.add_metric(bwd_loss, name="bwd_loss", aggregation="mean")
     model.add_metric(fwd_loss, name="fwd_loss", aggregation="mean")
 
     # Encoder-Decoder Identity
+    print("current shape:", current.shape)
     id_loss = id_wt * inverse_reg(current, encoder, decoder)
     model.add_loss(id_loss)
     model.add_metric(id_loss, name="id_loss", aggregation="mean")

@@ -76,7 +76,8 @@ callbacks = [
         verbose=1, period=20),
     TensorBoard(histogram_freq=100, write_graph=False, write_images=True, 
         update_freq=(args.batchsize * 20), embeddings_freq=100),
-    ImgWriter(autoencoder, run_name, Xtest, Ytest),
+    ImgWriter(model=autoencoder, run_name=run_name, Xtest=Xtest, Ytest=Ytest, 
+        freq=1000),
 ]
 
 print("\n\n\nBegin Training")
@@ -97,4 +98,4 @@ else:
 
 save_history(H, run_name, marker_step=marker_step)
 
-output_eigvals(dynamics.weights[0], run_name, "stats")
+output_eigvals(dynamics.weights[0], run_name)

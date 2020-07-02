@@ -52,10 +52,13 @@ class FullyConnectedBlock(Layer):
 
 class LogLayer(Layer):
 
-    def call(self, x):
+    def __call__(self, x):
+        print("AAAA")
         print(type(x))
         print(x.shape)
-        tf.print(x, output_stream=sys.stderr)
+        tf.print("AAAAAAAAA", output_stream=sys.stderr)
+        tf.print(x.shape, output_stream=sys.stderr)
+        x = super().__call__(x)
         return x
 
 class AutoencoderBlock(Layer):
@@ -78,3 +81,4 @@ class AutoencoderBlock(Layer):
         x = self.block2(x)
         x = self.block3(x)
         return x
+
