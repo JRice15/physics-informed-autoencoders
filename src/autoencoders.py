@@ -1,3 +1,4 @@
+import sys
 import keras.backend as K
 import numpy as np
 import tensorflow as tf
@@ -49,7 +50,13 @@ class FullyConnectedBlock(Layer):
             x = self.batchnorm(x)
         return x
 
+class LogLayer(Layer):
 
+    def call(self, x):
+        print(type(x))
+        print(x.shape)
+        tf.print(x, output_stream=sys.stderr)
+        return x
 
 class AutoencoderBlock(Layer):
     """
@@ -59,12 +66,14 @@ class AutoencoderBlock(Layer):
     def __init__(self, sizes, name, activate_last=False, batchnorm_last=False):
         super().__init__()
 
+        self.log = LogLayer(name="loglayer")
         self.block1 = FullyConnectedBlock(name+"1", sizes[0])
         self.block2 = FullyConnectedBlock(name+"1", sizes[1])
         self.block3 = FullyConnectedBlock(name+"1", sizes[2], activate=activate_last,
             batchnorm=batchnorm_last)
 
     def call(self, x):
+        # x = self.log(x)
         x = self.block1(x)
         x = self.block2(x)
         x = self.block3(x)

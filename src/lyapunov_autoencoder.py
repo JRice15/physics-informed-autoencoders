@@ -17,8 +17,87 @@ from src.common import *
 from src.autoencoders import *
 
 
+class Defaults:
+    """
+    namespace for defining arg defaults
+    """
+    lr = 0.001
+    epochs = 6000
+    batchsize = 34
+    lambda_ = 3 # inverse regularizer weight
+    kappa = 3 # stability regularizer weight
+    gamma = 4 # stability regularizer steepness
+    sizes = (40, 25, 15) # largest to smallest
+
+
+def make_run_name(args):
+    run_name = args.name + ".lyapunov."
+    if args.no_stability:
+        run_name += "nostability."
+    else:
+        run_name += "stability."
+    run_name += "l{}_k{}_g{}.".format(args.lambd, args.kappa, args.gamma)
+    run_name += "{}epochs_{}batchsize_{}lr.".format(args.epochs, args.batchsize, args.lr)
+    run_name += "s{}_{}_{}.".format(*args.sizes)
+    return run_name
+
+
+
+class LyapunovStableDense(Dense):
+    """
+    Dense layer with optional Lyapunov stability regularization
+    Args:
+        kappa, gamma: regularization hyperparams
+        no_stab (bool): whether to have no stability regularization
+    """
+
+    def __init__(self, kappa, gamma=4, no_stab=False, *args, **kwargs):
+        if not no_stab:
+            kwargs["kernel_regularizer"] = self.lyapunov_stability_reg()
+        super().__init__(*args, 
+            kernel_initializer=glorot_normal(),
+            bias_initializer=zeros(),
+            **kwargs)
+        self.kappa = kappa
+        self.gamma = gamma
+
+    def lyapunov_stability_reg(self):
+        """
+        regularizes stability via eigenvalues of P matrix from Equation 21
+        """
+        def stability_regularizer(omega):
+            """
+            regularizer that accepts weight kernel and returns loss
+            """
+            # solve discrete lyapunov equation for P
+            omegaT = tf.transpose(omega)
+            omegaT = tf.linalg.LinearOperatorFullMatrix(omegaT)
+            kron = tf.linalg.LinearOperatorKronecker([omegaT, omegaT], is_square=True)
+            kron = kron.add_to_tensor( -tf.eye(kron.shape[-1]) )
+            pseudinv = tf.linalg.pinv(kron, validate_args=True) # tf.linalg.pinv requires tf version != 2.0
+            neg_Ivec = vec( -tf.eye(self.units) )
+            Pvec = tf.linalg.matvec(pseudinv, neg_Ivec)
+            P = unvec(Pvec, self.units)
+
+            # calculate eigenvalues of P
+            eigvalues, eigvectors = tf.linalg.eigh(P)
+            # eigvalues = tf.cast(eigvalues, tf.float32)
+
+            # calculate loss
+            neg_eigvalues = tf.gather(eigvalues, tf.where(eigvalues < 0))
+            prior = tf.exp((neg_eigvalues - 1) / self.gamma)
+            loss = self.kappa * tf.reduce_sum(prior)
+
+            self.add_metric(value=loss, name="stability_loss", aggregation='mean')
+
+            return loss
+        
+        return stability_regularizer
+
+
+
 def lyapunov_autoencoder(snapshot_shape, output_dims, lambda_, kappa, gamma,
-        no_stability=False, sizes=(40,25,15), all_models=False):
+        no_stability, sizes):
     """
     Create a lyapunov autoencoder model
     Args:
@@ -28,7 +107,7 @@ def lyapunov_autoencoder(snapshot_shape, output_dims, lambda_, kappa, gamma,
         kappa (float): weighting factor for stability regularizer
         sizes (tuple of int): depth of layers in decreasing order of size. default (40,25,15)
     Returns:
-        a Keras Model of the autoencoder
+        4 Keras Model of the autoencoder
     """
     inpt = Input(snapshot_shape)
     print("Autoencoder Input shape:", inpt.shape)
@@ -53,9 +132,9 @@ def lyapunov_autoencoder(snapshot_shape, output_dims, lambda_, kappa, gamma,
     model.add_loss(inv_loss)
     model.add_metric(inv_loss, name="inverse_loss", aggregation='mean')
 
-    if all_models:
-        return model, encoder, dynamics, decoder
-    return model
+    return model, encoder, dynamics, decoder
+
+
 
 
 

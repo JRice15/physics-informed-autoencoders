@@ -62,7 +62,11 @@ def write_im(im, title, filename, directory, show=False, outline=False):
 
     plt.title(title.title())
 
-    filename = directory + "/" + filename + ".png"
+    if filename[-1] == ".":
+        ext = "png"
+    else:
+        ext = ".png"
+    filename = directory + "/" + filename + ext
     plt.savefig(filename)
 
     if show:
@@ -84,15 +88,18 @@ def save_history(H: History, run_name, marker_step=1000):
     for k in H.history.keys():
         if not k.startswith("val_"):
             # skips first 200 epochs for clearer scale
-            train_data = H.history[k][200:]
+            skip = 0
+            if len(H.history[k]) > 200:
+                skip = 200
+            train_data = H.history[k][skip:]
             try:
-                valdata = H.history["val_"+k][200:]
+                valdata = H.history["val_"+k][skip:]
                 mark = 1
             except KeyError:
                 valdata = None
                 mark = 0
             data = (train_data, valdata)
-            xrange = list(range(200, len(train_data)+200))
+            xrange = list(range(skip, len(train_data)+skip))
             make_plot(xrange=xrange, data=data, axlabels=("epoch",k), mark=mark,
                 dnames=("train","validation"), title=k, marker_step=marker_step)
             plt.savefig("stats/" + run_name + "__" + k + ".png")
@@ -149,5 +156,38 @@ def make_plot(xrange, data, title, axlabels, dnames=None, marker_step=1,
         plt.legend(dnames, loc=legendloc)
 
     plt.margins(x=0.125, y=0.1)
+
+
+def output_eigvals(weight_matrix, name, directory):
+    try:
+        weight_matrix = weight_matrix.numpy()
+    except:
+        weight_matrix = np.array(weight_matrix)
+
+    e, v = np.linalg.eig(weight_matrix)
+
+    fig = plt.figure(figsize=(6.1, 6.1), facecolor="white",  edgecolor='k', dpi=150)
+    plt.scatter(e.real, e.imag, c = '#dd1c77', marker = 'o', s=15*6, zorder=2, label='Eigenvalues')
+
+    maxeig = 1.5
+    plt.xlim([-maxeig, maxeig])
+    plt.ylim([-maxeig, maxeig])
+    plt.locator_params(axis='x',nbins=4)
+    plt.locator_params(axis='y',nbins=4)
+
+    plt.xlabel('Real', fontsize=22)
+    plt.ylabel('Imaginary', fontsize=22)
+    plt.tick_params(axis='y', labelsize=22)
+    plt.tick_params(axis='x', labelsize=22)
+    plt.axhline(y=0,color='#636363',ls='-', lw=3, zorder=1 )
+    plt.axvline(x=0,color='#636363',ls='-', lw=3, zorder=1 )
+
+    #plt.legend(loc="upper left", fontsize=16)
+    t = np.linspace(0,np.pi*2,100)
+    plt.plot(np.cos(t), np.sin(t), ls='-', lw=3, c = '#636363', zorder=1 )
+    plt.tight_layout()
+    # plt.show()
+    plt.savefig(directory + '/' + name + '__eigvals.png')
+    plt.close()
 
 

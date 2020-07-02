@@ -3,60 +3,29 @@ import json
 import os
 import re
 import shutil
-import re
-
-import keras
-import keras.backend as K
-import numpy as np
-import tensorflow as tf
-import matplotlib.pyplot as plt
-from keras.models import Model
-from keras import Input
 import tkinter as tk
 from tkinter import filedialog
 
-from src.read_dataset import *
-from src.lyapunov_autoencoder import lyapunov_autoencoder
-from src.output_results import *
+import keras
+import keras.backend as K
+import matplotlib.pyplot as plt
+import numpy as np
+import tensorflow as tf
+from keras import Input
+from keras.models import Model
+
 from src.common import *
+from src.lyapunov_autoencoder import (Defaults, lyapunov_autoencoder,
+                                      make_run_name)
+from src.output_results import *
+from src.read_dataset import *
 
 print("Tensorflow version:", tf.__version__) # 2.2.0
 print("Keras version:", keras.__version__) # 2.4.3
 
-
-parser = argparse.ArgumentParser(description="see Erichson et al's 'PHYSICS-INFORMED "
-    "AUTOENCODERS FOR LYAPUNOV-STABLE FLUID FLOW PREDICTION' for context of "
-    "greek-letter hyperparameters")
-
-parser.add_argument("--name",type=str,required=True,help="name of this test")
-parser.add_argument("--lr",type=float,default=Defaults.lr,help="learning rate")
-parser.add_argument("--epochs",type=int,default=Defaults.epochs)
-parser.add_argument("--batchsize",type=int,default=Defaults.batchsize)
-parser.add_argument("--lambd",type=float,default=Defaults.lambda_,help="(lambda) inverse regularizer weight")
-parser.add_argument("--kappa",type=float,default=Defaults.kappa,help="stability regularizer weight")
-parser.add_argument("--gamma",type=float,default=Defaults.gamma,help="stability regularizer steepness")
-parser.add_argument("--no-stability",action="store_true",default=False,help="use this flag for no stability regularization")
-parser.add_argument("--s1",type=int,default=Defaults.sizes[0],help="first encoder layer output width")
-parser.add_argument("--s2",type=int,default=Defaults.sizes[1],help="second encoder layer output width")
-parser.add_argument("--s3",type=int,default=Defaults.sizes[2],help="third encoder layer output width")
-parser.add_argument("--load",default=None,metavar="FILENAME",help="load hyperparameters from a file in the 'presets/'")
-args = parser.parse_args()
-
-os.makedirs("data", exist_ok=True)
-os.makedirs("weights", exist_ok=True)
-os.makedirs("test_results", exist_ok=True)
-
-
-# echo args
-for k,v in args.__dict__.items():
-    if v is not None:
-        print("    " + k + ":", v)
-
-# allow hyperparamater loading
-if args.load is not None:
-    path = "presets/" + re.sub(r"[^-_A-Za-z0-9]", "", args.load) + ".json"
-    with open(path, "r") as f:
-        args.__dict__ = json.load(f)
+make_dirs()
+args = gather_args("lyapunov", 3, Defaults)
+run_name = make_run_name(args)
 
 # Read Data
 X, Xtest = data_from_name("flow_cylinder")
@@ -71,13 +40,15 @@ models = lyapunov_autoencoder(
     lambda_=args.lambd,
     gamma=args.gamma,
     no_stability=args.no_stability,
-    sizes=(args.s1, args.s2, args.s3),
+    sizes=args.sizes,
     all_models=True,
 )
 autoencoder, encoder, dynamics, decoder = models
 
 def run_test(weights_path, data, name, num_steps=50):
-
+    """
+    test a set of weights with multi-step prediction
+    """
     autoencoder.load_weights(weights_path)
 
     num_snapshots = data.shape[0]
@@ -116,7 +87,7 @@ def run_test(weights_path, data, name, num_steps=50):
     return error
 
 
-run_name = get_run_name(args)
+run_name = make_run_name(args)
 weights_path = "weights/weights." + run_name + ".hdf5"
 
 # Select weights 2
@@ -148,3 +119,5 @@ if dnames[1] is None:
     plt.savefig("test_results/multistep_mse_" + dnames[0] + ".png")
 else:
     plt.savefig("test_results/multistep_mse_" + dnames[0] + "_vs_" + dnames[1] + ".png")
+
+print("Results have been save to 'test_results/'")

@@ -17,24 +17,90 @@ from src.common import *
 from src.autoencoders import *
 
 
+class Defaults:
+    """
+    namespace for defining arg defaults
+    """
+    lr = 0.001
+    epochs = 6000
+    batchsize = 34
+    pred_steps = 5
+    forward = 1
+    backward = 1
+    identity = 1
+    consistency = 1
+    sizes = (40, 10) # largest to smallest
+
+
+
+def make_run_name(args):
+    run_name = args.name + ".koopman."
+    run_name += "{}steps.".format(args.pred_steps)
+    run_name += "f{}_b{}_i{}_c{}.".format(args.forward, args.backward, args.identity, args.consistency)
+    run_name += "{}epochs_{}batchsize_{}lr.".format(args.epochs, args.batchsize, args.lr)
+    run_name += "s{}_{}.".format(*args.sizes)
+    return run_name
+
+
 class BackwardDynamicsInitializer():
 
-    def __init__(self, forward_weights):
-        self.forward_weights = forward_weights
+    def __init__(self, fwd_layer):
+        self.forward_weights = fwd_layer.weights[0]
     
     def __call__(self, shape, dtype=None):
         assert self.forward_weights.shape == shape
         return tf.linalg.pinv(tf.transpose(self.forward_weights))
 
 
-def koopman_autoencoder(snapshot_shape, output_dims, pred_steps=5,
-        sizes=(40,15)):
+class KoopmanBackwardDense(Dense):
+
+    def __init__(self, fwd_layer, cons_wt, units, name, use_bias=False):
+        self.fwd_layer = fwd_layer
+        self.cons_wt = cons_wt
+        super().__init__(
+            units=units, 
+            name=name, 
+            use_bias=use_bias,
+            kernel_initializer=BackwardDynamicsInitializer(fwd_layer),
+            kernel_regularizer=self.consistency_reg()
+        )
+    
+    def consistency_reg(self):
+        """
+        regularize consistency of forward-backward dynamics
+        """
+        def regularizer(D):
+            """
+            D: backward weights
+            """
+            C = self.fwd_layer.weights[0]
+            I = tf.eye(self.units) # units == kappa in paper
+
+            loss = 0
+            for k in range(1, self.units+1):
+                loss += tf.reduce_sum(
+                    (tf.matmul(D[:k,:], C[:,:k]) - I) ** 2
+                ) / (2*k)
+                loss += tf.reduce_sum(
+                    (tf.matmul(C[:k,:], D[:,:k]) - I) ** 2
+                ) / (2*k)
+            loss = self.cons_wt * loss
+
+            self.add_metric(loss, name="cons_loss", aggregation="mean")
+            return loss
+        
+        return regularizer
+        
+
+
+def koopman_autoencoder(snapshot_shape, output_dims, fwd_wt, bwd_wt, id_wt, 
+        cons_wt, pred_steps, sizes, all_models=False):
     """
     Create a Koopman autoencoder
     Args:
         snapshot_shape (tuple of int): shape of snapshots, without batchsize or channels
         output_dims (int): number of output channels
-        kappa (float): bottleneck
+        fwd_wt, bwd_wt, id_wt, cons_wt: forward, backward, identity, and consistency regularizer weights
         sizes (tuple of int): depth of layers in decreasing order of size. default
     Returns:
         a Keras Model. This model will accept one input of 
@@ -42,23 +108,24 @@ def koopman_autoencoder(snapshot_shape, output_dims, pred_steps=5,
     """
     total_inpt_snapshots = (pred_steps * 2) + 1
     inpt = Input((total_inpt_snapshots,) + snapshot_shape)
-    print("Autoencoder Input shape:", inpt.shape)
+    current = inpt[:,pred_steps]
+    print("Autoencoder Input shape:", inpt.shape, "current shape:", current.shape)
 
-    intermediate = sizes[0]
-    bottleneck = sizes[1]
+    intermediate, bottleneck = sizes
 
     encoder = AutoencoderBlock((intermediate, intermediate, bottleneck),
         name="encoder")
     forward = Dense(bottleneck, use_bias=False, name="forward-dynamics",
         kernel_initializer=glorot_normal())
-    backward = Dense(bottleneck, use_bias=False, name="backward-dynamics",
-        kernel_initializer=BackwardDynamicsInitializer(forward.weights[0]))
+    # needed to build fwd layer
+    _ = forward(encoder(current))
+    backward = KoopmanBackwardDense(fwd_layer=forward, cons_wt=cons_wt, 
+        units=bottleneck, use_bias=False, name="backward-dynamics")
     decoder = AutoencoderBlock((intermediate, intermediate, output_dims),
         name="decoder")
 
     # predict pred_steps into the future
-    current_image = inpt[pred_steps]
-    encoded_out = encoder(current_image)
+    encoded_out = encoder(current)
     # outputs is list [earliest_backward_pred, ... latest_forward_pred]
     outputs = []
     # for each step size
@@ -74,10 +141,19 @@ def koopman_autoencoder(snapshot_shape, output_dims, pred_steps=5,
     
     model = Model(inputs=inpt, outputs=outputs)
 
-    true = tf.concat([inpt[:pred_steps], inpt[pred_steps+1:]], axis=0)
-    loss = tf.reduce_mean((true - outputs) ** 2)
-    model.add_loss(loss, name="mse", aggregation="mean")
+    # Forward and Backward Dynamics Regularizers
+    bwd_loss = bwd_wt * tf.reduce_mean((inpt[:pred_steps] - outputs[:pred_steps]) ** 2)
+    fwd_loss = fwd_wt * tf.reduce_mean((inpt[pred_steps+1:] - outputs[pred_steps:]) ** 2)
+    model.add_loss(bwd_loss)
+    model.add_loss(fwd_loss)
+    model.add_metric(bwd_loss, name="bwd_loss", aggregation="mean")
+    model.add_metric(fwd_loss, name="fwd_loss", aggregation="mean")
 
-    return model
+    # Encoder-Decoder Identity
+    id_loss = id_wt * inverse_reg(current, encoder, decoder)
+    model.add_loss(id_loss)
+    model.add_metric(id_loss, name="id_loss", aggregation="mean")
+
+    return model, encoder, forward, backward, decoder
 
 
