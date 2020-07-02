@@ -12,8 +12,9 @@ from keras.layers import (Activation, Add, BatchNormalization, Concatenate,
 from keras.models import Model
 from keras.activations import tanh
 
-from regularizers import *
-from common import *
+from src.regularizers import *
+from src.common import *
+from src.autoencoders import *
 
 
 class BackwardDynamicsInitializer():
@@ -36,12 +37,9 @@ def koopman_autoencoder(snapshot_shape, output_dims, pred_steps=5,
         kappa (float): bottleneck
         sizes (tuple of int): depth of layers in decreasing order of size. default
     Returns:
-        full: Keras Model for full autoencoder
-        encoder: ComposedLayers
-        dynamics: Layer
-        decoder: ComposedLayers
+        a Keras Model. This model will accept one input of 
+            (x images before, input image, x images after), where x is pred_steps
     """
-    # add channels
     total_inpt_snapshots = (pred_steps * 2) + 1
     inpt = Input((total_inpt_snapshots,) + snapshot_shape)
     print("Autoencoder Input shape:", inpt.shape)
@@ -49,33 +47,20 @@ def koopman_autoencoder(snapshot_shape, output_dims, pred_steps=5,
     intermediate = sizes[0]
     bottleneck = sizes[1]
 
-    #--------------------------- Encoder --------------------------------------
-    encoder_layers = make_fc_block(intermediate, name="enc1")
-    encoder_layers += make_fc_block(intermediate, name="enc2")
-    encoder_layers += make_fc_block(bottleneck, activate=False, name="enc3")
-
-    encoder = ComposedLayers(encoder_layers)
-
-    #--------------------------- Forward Dynamics -----------------------------
-    forward = Dense(bottleneck, use_bias=False, 
+    encoder = AutoencoderBlock((intermediate, intermediate, bottleneck),
+        name="encoder")
+    forward = Dense(bottleneck, use_bias=False, name="forward-dynamics",
         kernel_initializer=glorot_normal())
-
-    #--------------------------- Backward Dynamics ----------------------------
-    backward = Dense(bottleneck, use_bias=False, 
+    backward = Dense(bottleneck, use_bias=False, name="backward-dynamics",
         kernel_initializer=BackwardDynamicsInitializer(forward.weights[0]))
+    decoder = AutoencoderBlock((intermediate, intermediate, output_dims),
+        name="decoder")
 
-    #--------------------------- Decoder --------------------------------------
-    decoder_layers = make_fc_block(intermediate, name="dec1")
-    decoder_layers += make_fc_block(intermediate, name="dec2")
-    decoder_layers += make_fc_block(output_dims, activate=False, name="dec3")
-
-    decoder = ComposedLayers(decoder_layers)
-
-    #--------------------------- Create Model ---------------------------------
-
-    encoded_out = encoder(inpt)
-    forward_out = []
-    backward_out = []
+    # predict pred_steps into the future
+    current_image = inpt[pred_steps]
+    encoded_out = encoder(current_image)
+    # outputs is list [earliest_backward_pred, ... latest_forward_pred]
+    outputs = []
     # for each step size
     for s in range(1, pred_steps+1):
         # compute the forward and backward predictions
@@ -84,12 +69,14 @@ def koopman_autoencoder(snapshot_shape, output_dims, pred_steps=5,
         for _ in range(s):
             x_f = forward(x_f)
             x_b = backward(x_b)
-        forward_out.append(decoder(x_f))
-        backward_out.append(decoder(x_b))
+        outputs.append(decoder(x_f))
+        outputs.insert(0, decoder(x_b))
     
-    model = Model(inputs=inpt, outputs=[forward_out, backward_out])
+    model = Model(inputs=inpt, outputs=outputs)
 
-    model.add_loss()
+    true = tf.concat([inpt[:pred_steps], inpt[pred_steps+1:]], axis=0)
+    loss = tf.reduce_mean((true - outputs) ** 2)
+    model.add_loss(loss, name="mse", aggregation="mean")
 
     return model
 

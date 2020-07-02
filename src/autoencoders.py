@@ -12,8 +12,8 @@ from keras.layers import (Activation, Add, BatchNormalization, Concatenate,
 from keras.models import Model
 from keras.activations import tanh
 
-from regularizers import *
-from common import *
+from src.regularizers import *
+from src.common import *
 
 """
 generic autoencoder building blocks to be used between implementations
@@ -43,8 +43,8 @@ class FullyConnectedBlock(Layer):
         if batchnorm:
             self.batchnorm = BatchNormalization(name=name+"-batchnorm")
     
-    def call(self, inputs):
-        x = self.dense(inputs)
+    def call(self, x):
+        x = self.dense(x)
         if self.activation is not None:
             x = self.activation(x)
         if self.batchnorm is not None:

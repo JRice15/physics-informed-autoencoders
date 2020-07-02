@@ -15,10 +15,10 @@ from keras import Input
 import tkinter as tk
 from tkinter import filedialog
 
-from read_dataset import *
-from lyapunov_autoencoder import lyapunov_autoencoder
-from output_results import *
-from common import *
+from src.read_dataset import *
+from src.lyapunov_autoencoder import lyapunov_autoencoder
+from src.output_results import *
+from src.common import *
 
 print("Tensorflow version:", tf.__version__) # 2.2.0
 print("Keras version:", keras.__version__) # 2.4.3

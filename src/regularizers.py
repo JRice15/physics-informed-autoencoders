@@ -10,6 +10,7 @@ from keras import Input
 from keras.layers import Layer, Dense
 
 
+
 class LyapunovStableDense(Dense):
     """
     Dense layer with optional Lyapunov stability regularization
@@ -81,8 +82,6 @@ class LyapunovStableDense(Dense):
         return stability_regularizer
 
 
-
-
 def inverse_reg(x, encoder, decoder):
     """
     regularizer to enforce that the decoder is the inverse of the encoder. 
@@ -114,6 +113,8 @@ def vec(X):
     x = tf.unstack(X, axis=-1)
     x = tf.concat(x, axis=0)
     return x
+
+
 
 
 

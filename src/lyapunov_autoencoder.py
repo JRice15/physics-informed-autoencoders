@@ -12,9 +12,9 @@ from keras.layers import (Activation, Add, BatchNormalization, Concatenate,
 from keras.models import Model
 from keras.activations import tanh
 
-from regularizers import *
-from common import *
-from autoencoders import *
+from src.regularizers import *
+from src.common import *
+from src.autoencoders import *
 
 
 def lyapunov_autoencoder(snapshot_shape, output_dims, lambda_, kappa, gamma,
@@ -28,12 +28,8 @@ def lyapunov_autoencoder(snapshot_shape, output_dims, lambda_, kappa, gamma,
         kappa (float): weighting factor for stability regularizer
         sizes (tuple of int): depth of layers in decreasing order of size. default (40,25,15)
     Returns:
-        full: Keras Model for full autoencoder
-        encoder: ComposedLayers
-        dynamics: Layer
-        decoder: ComposedLayers
+        a Keras Model of the autoencoder
     """
-    # add channels
     inpt = Input(snapshot_shape)
     print("Autoencoder Input shape:", inpt.shape)
 
@@ -41,10 +37,8 @@ def lyapunov_autoencoder(snapshot_shape, output_dims, lambda_, kappa, gamma,
 
     encoder = AutoencoderBlock((large, medium, small), name="encoder", 
         batchnorm_last=True)
-
     dynamics = LyapunovStableDense(kappa=kappa, gamma=gamma, no_stab=no_stability,
         units=small, name="lyapunovstable-dynamics")
-
     decoder = AutoencoderBlock((medium, large, output_dims), name="decoder")
 
     x = encoder(inpt)

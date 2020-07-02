@@ -10,7 +10,7 @@ import numpy as np
 import tensorflow as tf
 from keras.callbacks import Callback, History
 
-from read_dataset import *
+from src.read_dataset import *
 
 
 class ImgWriter(Callback):
