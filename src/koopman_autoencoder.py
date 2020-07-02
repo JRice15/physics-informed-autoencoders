@@ -74,10 +74,11 @@ class KoopmanBackwardDense(Dense):
             D: backward weights
             """
             C = self.fwd_layer.weights[0]
-            I = tf.eye(self.units) # units == kappa in paper
 
             loss = 0
+            # units == kappa in paper
             for k in range(1, self.units+1):
+                I = tf.eye(k)
                 loss += tf.reduce_sum(
                     (tf.matmul(D[:k,:], C[:,:k]) - I) ** 2
                 ) / (2*k)
