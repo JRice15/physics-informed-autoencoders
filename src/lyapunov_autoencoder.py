@@ -18,7 +18,7 @@ from src.autoencoders import *
 
 
 def lyapunov_autoencoder(snapshot_shape, output_dims, lambda_, kappa, gamma,
-        no_stability=False, sizes=(40,25,15)):
+        no_stability=False, sizes=(40,25,15), all_models=False):
     """
     Create a lyapunov autoencoder model
     Args:
@@ -53,6 +53,8 @@ def lyapunov_autoencoder(snapshot_shape, output_dims, lambda_, kappa, gamma,
     model.add_loss(inv_loss)
     model.add_metric(inv_loss, name="inverse_loss", aggregation='mean')
 
+    if all_models:
+        return model, encoder, dynamics, decoder
     return model
 
 

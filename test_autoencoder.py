@@ -28,10 +28,10 @@ parser = argparse.ArgumentParser(description="see Erichson et al's 'PHYSICS-INFO
     "AUTOENCODERS FOR LYAPUNOV-STABLE FLUID FLOW PREDICTION' for context of "
     "greek-letter hyperparameters")
 
+parser.add_argument("--name",type=str,required=True,help="name of this test")
 parser.add_argument("--lr",type=float,default=Defaults.lr,help="learning rate")
 parser.add_argument("--epochs",type=int,default=Defaults.epochs)
 parser.add_argument("--batchsize",type=int,default=Defaults.batchsize)
-parser.add_argument("--tag",type=str,default=None,help="tag to add to weights path to not overwrite the default path")
 parser.add_argument("--lambd",type=float,default=Defaults.lambda_,help="(lambda) inverse regularizer weight")
 parser.add_argument("--kappa",type=float,default=Defaults.kappa,help="stability regularizer weight")
 parser.add_argument("--gamma",type=float,default=Defaults.gamma,help="stability regularizer steepness")
@@ -71,7 +71,8 @@ models = lyapunov_autoencoder(
     lambda_=args.lambd,
     gamma=args.gamma,
     no_stability=args.no_stability,
-    sizes=(args.s1, args.s2, args.s3)
+    sizes=(args.s1, args.s2, args.s3),
+    all_models=True,
 )
 autoencoder, encoder, dynamics, decoder = models
 
@@ -118,8 +119,6 @@ def run_test(weights_path, data, name, num_steps=50):
 run_name = get_run_name(args)
 weights_path = "weights/weights." + run_name + ".hdf5"
 
-name1 = re.sub(r"\s", "_", input("Name for these initial weights: "))
-
 # Select weights 2
 
 yn = input("Compare to another run? [y/n]: ")
@@ -132,13 +131,13 @@ if yn.lower().strip() == "y":
 
     name2 = re.sub(r"\s", "_", input("Name for second chosen weights: "))
 
-    error1 = run_test(weights_path, data, name1)
+    error1 = run_test(weights_path, data, args.name)
     error2 = run_test(weights2_path, data, name2)
-    dnames = (name1, name2)
+    dnames = (args.name, name2)
 else:
-    error1 = run_test(weights_path, data, name1)
+    error1 = run_test(weights_path, data, args.name)
     error2 = None
-    dnames = (name1,None)
+    dnames = (args.name,None)
 
 xrange = list(range(len(error1)))
 make_plot(xrange=xrange, data=(error1, error2), dnames=dnames, title="MSE for Multi-Step Predictions", 

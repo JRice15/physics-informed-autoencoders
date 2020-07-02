@@ -27,10 +27,10 @@ parser = argparse.ArgumentParser(description="see Erichson et al's 'PHYSICS-INFO
     "AUTOENCODERS FOR LYAPUNOV-STABLE FLUID FLOW PREDICTION' for context of "
     "greek-letter hyperparameters")
 
+parser.add_argument("--name",type=str,required=True,help="name of this training run")
 parser.add_argument("--lr",type=float,default=Defaults.lr,help="learning rate")
 parser.add_argument("--epochs",type=int,default=Defaults.epochs)
 parser.add_argument("--batchsize",type=int,default=Defaults.batchsize)
-parser.add_argument("--tag",type=str,default=None,help="tag to add to weights path to not overwrite the default path")
 parser.add_argument("--lambd",type=float,default=Defaults.lambda_,help="(lambda) inverse regularizer weight")
 parser.add_argument("--kappa",type=float,default=Defaults.kappa,help="stability regularizer weight")
 parser.add_argument("--gamma",type=float,default=Defaults.gamma,help="stability regularizer steepness")
@@ -114,7 +114,8 @@ callbacks = [
     # ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=100, 
     #     min_lr=(args.lr / 16), verbose=1),
     LearningRateScheduler(lr_schedule),
-    ModelCheckpoint(weights_path, save_best_only=True, verbose=1, period=20),
+    ModelCheckpoint(weights_path, save_best_only=True, save_weights_only=True, 
+        verbose=1, period=20),
     TensorBoard(histogram_freq=100, write_graph=False, write_images=True, 
         update_freq=(args.batchsize * 20), embeddings_freq=100),
     ImgWriter(autoencoder, run_name, Xtest, Ytest),

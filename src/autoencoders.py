@@ -28,8 +28,6 @@ class FullyConnectedBlock(Layer):
 
     def __init__(self, name, output_dims, activate=True, batchnorm=False):
         super().__init__()
-        self.layer_name = name
-        self.layer_flags = (activate, batchnorm)
 
         self.dense = Dense(output_dims,
             kernel_initializer=glorot_normal(), # aka Xavier Normal
@@ -51,14 +49,6 @@ class FullyConnectedBlock(Layer):
             x = self.batchnorm(x)
         return x
 
-    def get_config(self):
-        return {
-            "name": self.layer_name,
-            "output_dims": self.dense.units,
-            "activate": self.layer_flags[0],
-            "batchnorm": self.layer_flags[1],
-        }
-
 
 
 class AutoencoderBlock(Layer):
@@ -68,10 +58,6 @@ class AutoencoderBlock(Layer):
 
     def __init__(self, sizes, name, activate_last=False, batchnorm_last=False):
         super().__init__()
-        self.sizes = sizes
-        self.layer_name = name
-        self.activate = activate_last
-        self.batchnorm = batchnorm_last
 
         self.block1 = FullyConnectedBlock(name+"1", sizes[0])
         self.block2 = FullyConnectedBlock(name+"1", sizes[1])
@@ -83,12 +69,3 @@ class AutoencoderBlock(Layer):
         x = self.block2(x)
         x = self.block3(x)
         return x
-
-    def get_config(self):
-        return {
-            "sizes": self.sizes,
-            "name": self.layer_name,
-            "activate_last": self.activate,
-            "batchnorm_last": self.batchnorm,
-        }
-

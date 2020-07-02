@@ -26,9 +26,7 @@ class Defaults:
     sizes = (40, 25, 15) # largest to smallest
 
 def get_run_name(args):
-    run_name = ""
-    if args.tag is not None:
-        run_name += args.tag + "."
+    run_name = args.name + "."
     if args.no_stability:
         run_name += "nostability."
     else:
