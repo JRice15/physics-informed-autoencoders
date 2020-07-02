@@ -83,21 +83,23 @@ def get_num_str(num):
 def save_history(H: History, run_name, marker_step=1000):
     for k in H.history.keys():
         if not k.startswith("val_"):
-            train_data = H.history[k]
+            # skips first 200 epochs for clearer scale
+            train_data = H.history[k][200:]
             try:
-                valdata = H.history["val_"+k]
+                valdata = H.history["val_"+k][200:]
                 mark = 1
             except KeyError:
                 valdata = None
                 mark = 0
             data = (train_data, valdata)
-            make_plot(data=data, axlabels=("epoch",k), mark=mark,
+            xrange = list(range(200, len(train_data)+200))
+            make_plot(xrange=xrange, data=data, axlabels=("epoch",k), mark=mark,
                 dnames=("train","validation"), title=k, marker_step=marker_step)
             plt.savefig("stats/" + run_name + "__" + k + ".png")
             plt.close()
 
 
-def make_plot(data, title, axlabels, dnames=None, marker_step=1, 
+def make_plot(xrange, data, title, axlabels, dnames=None, marker_step=1, 
         mark=0, legendloc="upper right"):
     """
     plot d1 and optional d2 on the same plot
@@ -115,9 +117,9 @@ def make_plot(data, title, axlabels, dnames=None, marker_step=1,
             continue
         if i == mark:
             mark_data = data[i]
-            plt.plot(data[i], marker=".", markevery=marker_step)
+            plt.plot(xrange, data[i], marker=".", markevery=marker_step)
         else:
-            plt.plot(data[i])
+            plt.plot(xrange, data[i])
 
     if mark_data is not None:
         points = mark_data[::marker_step]

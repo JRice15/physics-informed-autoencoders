@@ -73,7 +73,7 @@ X, Xtest = data_from_name("flow_cylinder")
 datashape = X[0].shape
 
 # Create Model
-models = shallow_autoencoder(
+autoencoder = lyapunov_autoencoder(
     snapshot_shape=datashape,
     output_dims=datashape[-1],
     kappa=args.kappa,
@@ -82,7 +82,6 @@ models = shallow_autoencoder(
     no_stability=args.no_stability,
     sizes=(args.s1, args.s2, args.s3)
 )
-autoencoder, encoder, dynamics, decoder = models
 
 optimizer = Adam(
     learning_rate=args.lr, 

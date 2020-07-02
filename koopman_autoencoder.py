@@ -26,7 +26,7 @@ class BackwardDynamicsInitializer():
         return tf.linalg.pinv(tf.transpose(self.forward_weights))
 
 
-def koopman_autoencoder(snapshot_shape, output_dims, 
+def koopman_autoencoder(snapshot_shape, output_dims, pred_steps=5,
         sizes=(40,15)):
     """
     Create a Koopman autoencoder
@@ -34,7 +34,7 @@ def koopman_autoencoder(snapshot_shape, output_dims,
         snapshot_shape (tuple of int): shape of snapshots, without batchsize or channels
         output_dims (int): number of output channels
         kappa (float): bottleneck
-        sizes (tuple of int): depth of layers in decreasing order of size. default (40,25,15)
+        sizes (tuple of int): depth of layers in decreasing order of size. default
     Returns:
         full: Keras Model for full autoencoder
         encoder: ComposedLayers
@@ -42,7 +42,8 @@ def koopman_autoencoder(snapshot_shape, output_dims,
         decoder: ComposedLayers
     """
     # add channels
-    inpt = Input(snapshot_shape)
+    total_inpt_snapshots = (pred_steps * 2) + 1
+    inpt = Input((total_inpt_snapshots,) + snapshot_shape)
     print("Autoencoder Input shape:", inpt.shape)
 
     intermediate = sizes[0]
@@ -70,5 +71,26 @@ def koopman_autoencoder(snapshot_shape, output_dims,
 
     decoder = ComposedLayers(decoder_layers)
 
+    #--------------------------- Create Model ---------------------------------
 
-    return encoder, forward, backward, decoder
+    encoded_out = encoder(inpt)
+    forward_out = []
+    backward_out = []
+    # for each step size
+    for s in range(1, pred_steps+1):
+        # compute the forward and backward predictions
+        x_f = encoded_out
+        x_b = encoded_out
+        for _ in range(s):
+            x_f = forward(x_f)
+            x_b = backward(x_b)
+        forward_out.append(decoder(x_f))
+        backward_out.append(decoder(x_b))
+    
+    model = Model(inputs=inpt, outputs=[forward_out, backward_out])
+
+    model.add_loss()
+
+    return model
+
+

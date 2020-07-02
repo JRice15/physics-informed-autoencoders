@@ -16,7 +16,7 @@ import tkinter as tk
 from tkinter import filedialog
 
 from read_dataset import *
-from shallow_autoencoder import shallow_autoencoder
+from lyapunov_autoencoder import lyapunov_autoencoder
 from output_results import *
 from common import *
 
@@ -64,7 +64,7 @@ datashape = X[0].shape
 data = np.concatenate([X, Xtest], axis=0)
 
 # Create Model
-models = shallow_autoencoder(
+models = lyapunov_autoencoder(
     snapshot_shape=datashape,
     output_dims=datashape[-1],
     kappa=args.kappa,
@@ -140,8 +140,8 @@ else:
     error2 = None
     dnames = (name1,None)
 
-
-make_plot(data=(error1, error2), dnames=dnames, title="MSE for Multi-Step Predictions", 
+xrange = list(range(len(error1)))
+make_plot(xrange=xrange, data=(error1, error2), dnames=dnames, title="MSE for Multi-Step Predictions", 
     mark=0, axlabels=("steps", "mean squared error"), legendloc="upper left",
     marker_step=(len(error1) // 6))
 

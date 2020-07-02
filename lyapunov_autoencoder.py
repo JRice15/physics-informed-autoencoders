@@ -14,6 +14,7 @@ from keras.activations import tanh
 
 from regularizers import *
 from common import *
+from autoencoders import *
 
 
 def lyapunov_autoencoder(snapshot_shape, output_dims, lambda_, kappa, gamma,
@@ -38,38 +39,27 @@ def lyapunov_autoencoder(snapshot_shape, output_dims, lambda_, kappa, gamma,
 
     large, medium, small = sizes
 
-    #--------------------------- Encoder --------------------------------------
-    encoder_layers = make_fc_block(large, name="enc1")
-    encoder_layers += make_fc_block(medium, name="enc2")
-    encoder_layers += make_fc_block(small, activate=False, batchnorm=True, name="enc3")
+    encoder = AutoencoderBlock((large, medium, small), name="encoder", 
+        batchnorm_last=True)
 
-    encoder = ComposedLayers(encoder_layers)
-    encoded_output = encoder(inpt)
-
-    #--------------------------- Dynamics -------------------------------------
     dynamics = LyapunovStableDense(kappa=kappa, gamma=gamma, no_stab=no_stability,
         units=small, name="lyapunovstable-dynamics")
-    dynamics_output = dynamics(encoded_output)
 
-    #--------------------------- Decoder --------------------------------------
-    decoder_layers = make_fc_block(medium, name="dec1")
-    decoder_layers += make_fc_block(large, name="dec2")
-    decoder_layers += make_fc_block(output_dims, activate=False, name="dec3")
+    decoder = AutoencoderBlock((medium, large, output_dims), name="decoder")
 
-    decoder = ComposedLayers(decoder_layers)
-    output = decoder(dynamics_output)
+    x = encoder(inpt)
+    x = dynamics(x)
+    x = decoder(x)
 
-    #--------------------------- Full Model -----------------------------------
-    model = Model(inpt, output)
+    model = Model(inpt, x)
 
-    #--------------------------- Regularization -------------------------------
-    # inverse property of encoder-decoder
+    # inverse regularizer of encoder-decoder
     inv_loss = lambda_ * inverse_reg(inpt, encoder, decoder)
 
     model.add_loss(inv_loss)
     model.add_metric(inv_loss, name="inverse_loss", aggregation='mean')
 
-    return model, encoder, dynamics, decoder
+    return model
 
 
 
