@@ -21,15 +21,15 @@ class Defaults:
     """
     namespace for defining arg defaults
     """
-    lr = 0.001
+    lr = 0.01
     epochs = 6000
     batchsize = 34
-    pred_steps = 5
+    pred_steps = 8
     forward = 1
-    backward = 1
+    backward = 0.1
     identity = 1
-    consistency = 1
-    sizes = (40, 10) # largest to smallest
+    consistency = 0.01
+    sizes = (2*16, 10) # largest to smallest
 
 
 

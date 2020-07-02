@@ -1,0 +1,17 @@
+{
+  "name": "erichson-et-al-cylinder",
+  "lr": 0.01,
+  "epochs": 6000,
+  "batchsize": 34,
+  "sizes": [
+    32,
+    10
+  ],
+  "pred_steps": 8,
+  "identity": 0.01,
+  "forward": 1,
+  "backward": 0.1,
+  "consistency": 0.01,
+  "save": true,
+  "load": false
+}

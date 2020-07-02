@@ -46,8 +46,8 @@ def gather_args(model_type, num_sizes, defaults):
         parser.add_argument("--backward",default=defaults.backward,help="weight for backward dynamics regularizer term")
         parser.add_argument("--consistency",default=defaults.consistency,help="weight for consistency regularizer term")
 
-    parser.add_argument("--save",default=None,metavar="FILENAME",help="save these hyperparameters to a file, which will be placed in the 'presets/' directory")
-    parser.add_argument("--load",default=None,metavar="FILENAME",help="load hyperparameters from a file in the 'presets/'")
+    parser.add_argument("--save",action="store_true",default=False,help="save these hyperparameters to a file, 'presets/<name>.<model>.json'")
+    parser.add_argument("--load",action="store_true",default=False,help="load hyperparameters from a file in the 'presets/'")
 
     args = parser.parse_args()
 
@@ -60,12 +60,12 @@ def gather_args(model_type, num_sizes, defaults):
     if args.save is not None:
         print("Saving parameters...")
         os.makedirs("presets", exist_ok=True)
-        path = "presets/" + re.sub(r"[^-_A-Za-z0-9]", "", args.save) + ".json"
+        path = "presets/" + args.name + "." + model_type + ".json"
         with open(path, "w") as f:
             json.dump(args.__dict__, f, indent=2)
     elif args.load is not None:
         print("Loading parameters...")
-        path = "presets/" + re.sub(r"[^-_A-Za-z0-9]", "", args.load) + ".json"
+        path = "presets/" + args.name + "." + model_type + ".json"
         with open(path, "r") as f:
             loaded = json.load(f)
         args.__dict__.update(loaded)
