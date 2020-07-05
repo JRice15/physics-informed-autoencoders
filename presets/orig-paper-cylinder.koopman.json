@@ -1,5 +1,5 @@
 {
-  "name": "erichson-et-al-cylinder",
+  "name": "orig-paper-cylinder",
   "lr": 0.01,
   "epochs": 6000,
   "batchsize": 34,
@@ -12,6 +12,6 @@
   "forward": 1,
   "backward": 0.1,
   "consistency": 0.01,
-  "save": true,
-  "load": false
+  "save": false,
+  "load": true
 }

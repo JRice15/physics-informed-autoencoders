@@ -1,4 +1,5 @@
 import re
+import time
 
 import keras
 import keras.backend as K
@@ -76,11 +77,13 @@ callbacks = [
         verbose=1, period=20),
     TensorBoard(histogram_freq=100, write_graph=False, write_images=True, 
         update_freq=(args.batchsize * 20), embeddings_freq=100),
-    ImgWriter(model=autoencoder, run_name=run_name, Xtest=Xtest, Ytest=Ytest, 
-        freq=1000),
+    ImgWriter(pipeline=(encoder, dynamics, decoder), run_name=run_name, 
+        Xtest=Xtest, Ytest=Ytest, freq=10),
 ]
 
 print("\n\n\nBegin Training")
+
+start_time = time.time()
 
 H = autoencoder.fit(
     x=X, y=Y,
@@ -90,6 +93,8 @@ H = autoencoder.fit(
     validation_data=(Xtest, Ytest),
     verbose=2,
 )
+
+print("Traing took {0} minutes".format((time.time() - start_time)/60))
 
 if 7000 >= args.epochs >= 3000:
     marker_step = 1000

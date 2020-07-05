@@ -16,14 +16,18 @@ from src.read_dataset import *
 class ImgWriter(Callback):
     """
     args:
+        pipeline: tuple of (encoder, dynamics, decoder)
         freq: period of epochs to write out each image
         epochs: total epochs
     """
 
-    def __init__(self, model, run_name, Xtest, Ytest, freq=1000):
+    def __init__(self, pipeline, run_name, Xtest, Ytest, freq=1000):
         super().__init__()
+        encoder, dynamics, decoder = pipeline
+        self.encoder = encoder
+        self.dynamics = dynamics
+        self.decoder = decoder
         self.freq = freq
-        self.model = model
         self.run_name = run_name
         self.X = tf.reshape(Xtest[7], (1, -1))
         write_im(Ytest[7], "Target Y(t+1)", "target_outlined", "train_results", outline=True)
@@ -34,7 +38,7 @@ class ImgWriter(Callback):
     def on_epoch_end(self, epoch, logs=None):
         if (epoch + 1) % self.freq == 0:
             print("Saving result image...")
-            result = self.model(self.X)
+            result = self.decoder(self.dynamics(self.encoder(self.X)))
             write_im(
                 im=K.eval(result),
                 title="Epoch {} Prediction".format(epoch+1),
@@ -44,6 +48,9 @@ class ImgWriter(Callback):
 
 
 def write_im(im, title, filename, directory, show=False, outline=False):
+    """
+    if show=True, filename and directory can be None
+    """
     img = im.reshape((384, 199))
 
     x2 = np.arange(0, 384, 1)
@@ -68,15 +75,15 @@ def write_im(im, title, filename, directory, show=False, outline=False):
 
     plt.title(title.title())
 
-    if filename[-1] == ".":
-        ext = "png"
-    else:
-        ext = ".png"
-    filename = directory + "/" + filename + ext
-    plt.savefig(filename)
-
     if show:
         plt.show()
+    else:
+        if filename[-1] == ".":
+            ext = "png"
+        else:
+            ext = ".png"
+        filename = directory + "/" + filename + ext
+        plt.savefig(filename)
 
     plt.close()
 

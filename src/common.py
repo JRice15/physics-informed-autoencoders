@@ -57,13 +57,13 @@ def gather_args(model_type, num_sizes, defaults):
             print("    " + k + ":", v)
 
     # allow hyperparamater saving/loading
-    if args.save is not None:
+    if args.save:
         print("Saving parameters...")
         os.makedirs("presets", exist_ok=True)
         path = "presets/" + args.name + "." + model_type + ".json"
         with open(path, "w") as f:
             json.dump(args.__dict__, f, indent=2)
-    elif args.load is not None:
+    elif args.load:
         print("Loading parameters...")
         path = "presets/" + args.name + "." + model_type + ".json"
         with open(path, "r") as f:

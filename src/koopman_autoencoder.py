@@ -42,26 +42,29 @@ def make_run_name(args):
     return run_name
 
 
-class BackwardDynamicsInitializer():
+class InverseDynamicsInitializer():
 
-    def __init__(self, fwd_layer):
-        self.forward_weights = fwd_layer.weights[0]
+    def __init__(self, pair_layer):
+        self.pair_weights = pair_layer.weights[0]
     
     def __call__(self, shape, dtype=None):
-        assert self.forward_weights.shape == shape
-        return tf.linalg.pinv(tf.transpose(self.forward_weights))
+        assert self.pair_weights.shape == shape
+        return tf.linalg.pinv(tf.transpose(self.pair_weights))
 
 
-class KoopmanBackwardDense(Dense):
+class KoopmanConsistencyLayer(Dense):
+    """
+    enforce consistency of forward-backward predictions
+    """
 
-    def __init__(self, fwd_layer, cons_wt, units, name, use_bias=False):
-        self.fwd_layer = fwd_layer
+    def __init__(self, pair_layer, cons_wt, units, name, use_bias=False):
+        self.pair_layer = pair_layer
         self.cons_wt = cons_wt
         super().__init__(
             units=units, 
             name=name, 
             use_bias=use_bias,
-            kernel_initializer=BackwardDynamicsInitializer(fwd_layer),
+            kernel_initializer=InverseDynamicsInitializer(pair_layer),
             kernel_regularizer=self.consistency_reg()
         )
     
@@ -73,7 +76,7 @@ class KoopmanBackwardDense(Dense):
             """
             D: backward weights
             """
-            C = self.fwd_layer.weights[0]
+            C = self.pair_layer.weights[0]
 
             loss = 0
             # units == kappa in paper
@@ -122,7 +125,7 @@ def koopman_autoencoder(snapshot_shape, output_dims, fwd_wt, bwd_wt, id_wt,
         kernel_initializer=glorot_normal())
     # needed to build fwd layer
     _ = forward(encoder(current))
-    backward = KoopmanBackwardDense(fwd_layer=forward, cons_wt=cons_wt, 
+    backward = KoopmanConsistencyLayer(pair_layer=forward, cons_wt=cons_wt, 
         units=bottleneck, use_bias=False, name="backward-dynamics")
     decoder = AutoencoderBlock((intermediate, intermediate, output_dims),
         name="decoder")

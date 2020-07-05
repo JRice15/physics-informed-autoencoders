@@ -93,12 +93,14 @@ callbacks = [
         verbose=1, period=20),
     TensorBoard(histogram_freq=100, write_graph=False, write_images=True, 
         update_freq=(args.batchsize * 20), embeddings_freq=100),
-    ImgWriter(model=autoencoder, run_name=run_name, Xtest=Xtest[:-1], 
-        Ytest=Xtest[1:]),
+    ImgWriter(pipeline=(encoder, forward_dyn, decoder), run_name=run_name, 
+        Xtest=Xtest[:-1], Ytest=Xtest[1:], freq=1000),
 ]
 
 
 print("\n\n\nBegin Training")
+
+start_time = time.time()
 
 H = autoencoder.fit(
     x=data_gen(X, args.pred_steps, args.batchsize),
@@ -113,7 +115,7 @@ H = autoencoder.fit(
     verbose=2,
 )
 
-
+print("Traing took {0} minutes".format((time.time() - start_time)/60))
 
 if 7000 >= args.epochs >= 3000:
     marker_step = 1000
