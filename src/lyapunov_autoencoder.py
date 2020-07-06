@@ -42,6 +42,23 @@ def make_run_name(args):
     return run_name
 
 
+def vec(X):
+    """
+    stacking columns to create a vector from matrix X
+    """
+    x = tf.unstack(X, axis=-1)
+    x = tf.concat(x, axis=0)
+    return x
+
+
+def unvec(x, n):
+    """
+    convert vector back to n*n square matrix, using the vector as n stacked columns
+    """
+    x = tf.split(x, n)
+    x = tf.convert_to_tensor(x)
+    return tf.transpose(x)
+
 
 class LyapunovStableDense(Dense):
     """

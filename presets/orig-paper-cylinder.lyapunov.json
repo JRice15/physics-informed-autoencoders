@@ -1,5 +1,6 @@
 {
   "name": "erichson-et-al-cylinder",
+  "dataset": "flow_cylinder",
   "lr": 0.001,
   "epochs": 6000,
   "batchsize": 34,

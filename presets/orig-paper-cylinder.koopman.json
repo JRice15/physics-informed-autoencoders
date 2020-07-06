@@ -1,13 +1,15 @@
 {
   "name": "orig-paper-cylinder",
+  "dataset": "flow_cylinder",
   "lr": 0.01,
-  "epochs": 6000,
+  "epochs": 2000,
   "batchsize": 34,
   "sizes": [
     32,
     10
   ],
-  "pred_steps": 8,
+  "fwd_steps": 8,
+  "bwd_steps": 8,
   "identity": 0.01,
   "forward": 1,
   "backward": 0.1,

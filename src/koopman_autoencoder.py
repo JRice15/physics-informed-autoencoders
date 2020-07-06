@@ -22,9 +22,10 @@ class Defaults:
     namespace for defining arg defaults
     """
     lr = 0.01
-    epochs = 6000
+    epochs = 2000
     batchsize = 34
-    pred_steps = 8
+    fwd_steps = 8
+    bwd_steps = 8
     forward = 1
     backward = 0.1
     identity = 1
@@ -35,7 +36,7 @@ class Defaults:
 
 def make_run_name(args):
     run_name = args.name + ".koopman."
-    run_name += "{}steps.".format(args.pred_steps)
+    run_name += "{}f_{}b_steps.".format(args.fwd_steps, args.bwd_steps)
     run_name += "f{}_b{}_i{}_c{}.".format(args.forward, args.backward, args.identity, args.consistency)
     run_name += "{}epochs_{}batchsize_{}lr.".format(args.epochs, args.batchsize, args.lr)
     run_name += "s{}_{}.".format(*args.sizes)
@@ -98,7 +99,7 @@ class KoopmanConsistencyLayer(Dense):
 
 
 def koopman_autoencoder(snapshot_shape, output_dims, fwd_wt, bwd_wt, id_wt, 
-        cons_wt, pred_steps, sizes, all_models=False):
+        cons_wt, forward_steps, backward_steps, sizes, all_models=False):
     """
     Create a Koopman autoencoder
     Args:
@@ -110,10 +111,10 @@ def koopman_autoencoder(snapshot_shape, output_dims, fwd_wt, bwd_wt, id_wt,
         a Keras Model. This model will accept one input of 
             (x images before, input image, x images after), where x is pred_steps
     """
-    total_inpt_snapshots = (pred_steps * 2) + 1
+    total_inpt_snapshots = backward_steps + 1 + forward_steps
     inpt = Input((total_inpt_snapshots,) + snapshot_shape)
     tf.print("inpt shape:", inpt.shape)
-    current = inpt[:,pred_steps,:]
+    current = inpt[:,backward_steps,:]
     tf.print("current shape:", current.shape)
     print("Autoencoder Input shape:", inpt.shape, "current shape:", current.shape)
 
@@ -123,10 +124,11 @@ def koopman_autoencoder(snapshot_shape, output_dims, fwd_wt, bwd_wt, id_wt,
         name="encoder")
     forward = Dense(bottleneck, use_bias=False, name="forward-dynamics",
         kernel_initializer=glorot_normal())
-    # needed to build fwd layer
-    _ = forward(encoder(current))
-    backward = KoopmanConsistencyLayer(pair_layer=forward, cons_wt=cons_wt, 
-        units=bottleneck, use_bias=False, name="backward-dynamics")
+    if backward_steps > 0:
+        # needed to build fwd layer
+        _ = forward(encoder(current))
+        backward = KoopmanConsistencyLayer(pair_layer=forward, cons_wt=cons_wt, 
+            units=bottleneck, use_bias=False, name="backward-dynamics")
     decoder = AutoencoderBlock((intermediate, intermediate, output_dims),
         name="decoder")
 
@@ -135,40 +137,44 @@ def koopman_autoencoder(snapshot_shape, output_dims, fwd_wt, bwd_wt, id_wt,
     # outputs is list [earliest_backward_pred, ... latest_forward_pred]
     outputs = []
     # for each step size
-    for s in range(1, pred_steps+1):
+    for s in range(1, forward_steps+1):
         # compute the forward and backward predictions
         x_f = encoded_out
-        x_b = encoded_out
         for _ in range(s):
             x_f = forward(x_f)
-            x_b = backward(x_b)
         outputs.append(decoder(x_f))
-        outputs.insert(0, decoder(x_b))
     
+    for s in range(1, backward_steps+1):
+        x_b = encoded_out
+        for _ in range(s):
+            x_b = backward(x_b)
+        outputs.insert(0, decoder(x_b))
+
     model = Model(inputs=inpt, outputs=outputs)
 
     # Forward and Backward Dynamics Regularizers
-    bwd_pred = tf.stack(outputs[:pred_steps], axis=1)
-    bwd_true = inpt[:,:pred_steps,:]
-    fwd_pred = tf.stack(outputs[pred_steps:], axis=1)
-    fwd_true = inpt[:,pred_steps+1:,:]
-    print("pred shape:", fwd_pred.shape, bwd_pred.shape)
-    print("true shape:", fwd_true.shape, bwd_true.shape)
-    bwd_loss = bwd_wt * tf.reduce_mean((bwd_true - bwd_pred) ** 2)
+    fwd_pred = tf.stack(outputs[backward_steps:], axis=1)
+    fwd_true = inpt[:,backward_steps+1:,:]
     fwd_loss = fwd_wt * tf.reduce_mean((fwd_true - fwd_pred) ** 2)
-    model.add_loss(bwd_loss)
     model.add_loss(fwd_loss)
-    model.add_metric(bwd_loss, name="bwd_loss", aggregation="mean")
     model.add_metric(fwd_loss, name="fwd_loss", aggregation="mean")
 
+    if backward_steps > 0:
+        bwd_pred = tf.stack(outputs[:backward_steps], axis=1)
+        bwd_true = inpt[:,:backward_steps,:]
+        bwd_loss = bwd_wt * tf.reduce_mean((bwd_true - bwd_pred) ** 2)
+        model.add_loss(bwd_loss)
+        model.add_metric(bwd_loss, name="bwd_loss", aggregation="mean")
+
     # Encoder-Decoder Identity
-    print("current shape:", current.shape)
     id_loss = id_wt * inverse_reg(current, encoder, decoder)
     model.add_loss(id_loss)
     model.add_metric(id_loss, name="id_loss", aggregation="mean")
 
     # model.summary()
 
-    return model, encoder, forward, backward, decoder
+    if backward_steps > 0:
+        return model, encoder, forward, backward, decoder
+    return model, encoder, forward, decoder
 
 
