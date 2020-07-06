@@ -21,7 +21,7 @@ class ImgWriter(Callback):
         epochs: total epochs
     """
 
-    def __init__(self, pipeline, run_name, Xtest, Ytest, freq=1000):
+    def __init__(self, pipeline, run_name, Xtest, Ytest, imshape, freq=1000):
         super().__init__()
         encoder, dynamics, decoder = pipeline
         self.encoder = encoder
@@ -29,6 +29,7 @@ class ImgWriter(Callback):
         self.decoder = decoder
         self.freq = freq
         self.run_name = run_name
+        self.imshape = imshape
         self.X = tf.reshape(Xtest[7], (1, -1))
         write_im(Ytest[7], "Target Y(t+1)", "target_outlined", "train_results", outline=True)
         write_im(Ytest[7], "Target Y(t+1)", "target", "train_results")
@@ -97,13 +98,12 @@ def get_num_str(num):
         num = "{:.5f}".format(num)
     return num
 
-def save_history(H: History, run_name, marker_step=1000):
+def save_history(H: History, run_name, marker_step=1000, skip=200):
     for k in H.history.keys():
         if not k.startswith("val_"):
             # skips first 200 epochs for clearer scale
-            skip = 0
-            if len(H.history[k]) > 200:
-                skip = 200
+            if len(H.history[k]) < 2 * skip:
+                skip = 0
             train_data = H.history[k][skip:]
             try:
                 valdata = H.history["val_"+k][skip:]
@@ -114,15 +114,15 @@ def save_history(H: History, run_name, marker_step=1000):
             data = (train_data, valdata)
             xrange = list(range(skip, len(train_data)+skip))
             make_plot(xrange=xrange, data=data, axlabels=("epoch",k), mark=mark,
-                dnames=("train","validation"), title=k, marker_step=marker_step)
+                dnames=("train","validation"), title=k, marker_step=marker_step,
+                skipshift=skip)
             plt.savefig("stats/" + run_name + "__" + k + ".png")
             plt.close()
 
 
 def make_plot(xrange, data, title, axlabels, dnames=None, marker_step=1, 
-        mark=0, legendloc="upper right"):
+        mark=0, legendloc="upper right", skipshift=0):
     """
-    plot d1 and optional d2 on the same plot
     Args:
         data: tuple of lists/arrays, each of which is a data line
         mark: index of data to mark with value labels
@@ -152,12 +152,12 @@ def make_plot(xrange, data, title, axlabels, dnames=None, marker_step=1,
             else:
                 xytext = (0,-12)
                 up = True
-            plt.annotate(valstr, xy=(marker_step*i,y), xytext=xytext, 
+            plt.annotate(valstr, xy=(marker_step*i+skipshift,y), xytext=xytext, 
                 horizontalalignment="center", textcoords="offset points")
     
         valstr = get_num_str(mark_data[-1])
         ytext = 5 if up else -12
-        plt.annotate(valstr, xy=(len(mark_data) - 1, mark_data[-1]), xytext=(1,ytext), textcoords="offset points")
+        plt.annotate(valstr, xy=(len(mark_data)-1+skipshift, mark_data[-1]), xytext=(1,ytext), textcoords="offset points")
         plt.plot(len(mark_data)-1, mark_data[-1], marker=".", color="green")
 
     plt.title(title)

@@ -28,7 +28,7 @@ args = gather_args("lyapunov", num_sizes=3, defaults=Defaults)
 run_name = make_run_name(args)
 
 # Read Data
-X, Xtest = data_from_name("flow_cylinder")
+X, Xtest, imshape = data_from_name(args.dataset)
 datashape = X[0].shape
 
 # targets are one timestep ahead of inputs
@@ -58,27 +58,16 @@ autoencoder.compile(optimizer=optimizer, loss=mse, metrics=[metrics.MeanSquaredE
 
 weights_path = "weights/weights." + run_name + ".hdf5"
 
-def lr_schedule(epoch):
-    """
-    reduce lr by half every 1000 epochs
-    """
-    max_divisor = 5
-    divisor = epoch // 1000
-    new_rate = args.lr / (2 ** min(divisor, max_divisor))
-    if epoch % 1000 == 0:
-        print("LearningRateScheduler setting learning rate to {}".format(new_rate))
-    return new_rate
-
 callbacks = [
     # ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=100, 
     #     min_lr=(args.lr / 16), verbose=1),
-    LearningRateScheduler(lr_schedule),
+    LearningRateScheduler(lr_schedule(args)),
     ModelCheckpoint(weights_path, save_best_only=True, save_weights_only=True, 
         verbose=1, period=20),
     TensorBoard(histogram_freq=100, write_graph=False, write_images=True, 
         update_freq=(args.batchsize * 20), embeddings_freq=100),
     ImgWriter(pipeline=(encoder, dynamics, decoder), run_name=run_name, 
-        Xtest=Xtest, Ytest=Ytest, freq=10),
+        Xtest=Xtest, Ytest=Ytest, freq=args.epochs//6, imshape=imshape),
 ]
 
 print("\n\n\nBegin Training")
@@ -94,7 +83,8 @@ H = autoencoder.fit(
     verbose=2,
 )
 
-print("Traing took {0} minutes".format((time.time() - start_time)/60))
+print("Training took {0} minutes".format((time.time() - start_time)/60))
+print("{0} seconds per epoch".format((time.time() - start_time)/args.epochs))
 
 if 7000 >= args.epochs >= 3000:
     marker_step = 1000

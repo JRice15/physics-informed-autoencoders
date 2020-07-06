@@ -29,6 +29,7 @@ def gather_args(model_type, num_sizes, defaults):
         "greek-letter hyperparameters")
 
     parser.add_argument("--name",type=str,required=True,help="name of this training run")
+    parser.add_argument("--dataset",type=str,default="flow_cylinder",help="name of dataset")
     parser.add_argument("--lr",type=float,default=defaults.lr,help="learning rate")
     parser.add_argument("--epochs",type=int,default=defaults.epochs)
     parser.add_argument("--batchsize",type=int,default=defaults.batchsize)
@@ -40,11 +41,12 @@ def gather_args(model_type, num_sizes, defaults):
         parser.add_argument("--gamma",type=float,default=defaults.gamma,help="stability regularizer steepness")
         parser.add_argument("--no-stability",action="store_true",default=False,help="use this flag for no stability regularization")
     elif model_type == "koopman":
-        parser.add_argument("--pred-steps",default=defaults.pred_steps,help="number of forward and backward prediction steps to use in the loss")
-        parser.add_argument("--identity",default=defaults.consistency,help="weight for decoder(encoder)==identity regularizer term")
-        parser.add_argument("--forward",default=defaults.forward,help="weight for forward dynamics regularizer term")
-        parser.add_argument("--backward",default=defaults.backward,help="weight for backward dynamics regularizer term")
-        parser.add_argument("--consistency",default=defaults.consistency,help="weight for consistency regularizer term")
+        parser.add_argument("--identity",type=float,default=defaults.consistency,help="weight for decoder(encoder)==identity regularizer term")
+        parser.add_argument("--forward",type=float,default=defaults.forward,help="weight for forward dynamics regularizer term")
+        parser.add_argument("--backward",type=float,default=defaults.backward,help="weight for backward dynamics regularizer term")
+        parser.add_argument("--consistency",type=float,default=defaults.consistency,help="weight for consistency regularizer term")
+        parser.add_argument("--fwd-steps",type=int,default=defaults.fwd_steps,help="number of forward prediction steps to use in the loss")
+        parser.add_argument("--bwd-steps",type=int,default=defaults.bwd_steps,help="number of backward prediction steps to use in the loss")
 
     parser.add_argument("--save",action="store_true",default=False,help="save these hyperparameters to a file, 'presets/<name>.<model>.json'")
     parser.add_argument("--load",action="store_true",default=False,help="load hyperparameters from a file in the 'presets/'")
@@ -54,7 +56,7 @@ def gather_args(model_type, num_sizes, defaults):
     # echo args
     for k,v in args.__dict__.items():
         if v is not None:
-            print("    " + k + ":", v)
+            print("    " + k + ":", v, type(v))
 
     # allow hyperparamater saving/loading
     if args.save:
@@ -85,22 +87,15 @@ def make_dirs():
     os.makedirs("logs", exist_ok=True)
 
 
-def vec(X):
+def lr_schedule(args):
     """
-    stacking columns to create a vector from matrix X
+    reduce lr by half every (args.epochs // 6) epochs
     """
-    x = tf.unstack(X, axis=-1)
-    x = tf.concat(x, axis=0)
-    return x
-
-
-def unvec(x, n):
-    """
-    convert vector back to n*n square matrix, using the vector as n stacked columns
-    """
-    x = tf.split(x, n)
-    x = tf.convert_to_tensor(x)
-    return tf.transpose(x)
-
-
+    def scheduler(epoch):
+        divisor = epoch // (args.epochs // 6)
+        new_rate = args.lr / (2 ** divisor)
+        if epoch % (args.epochs // 6) == 0:
+            print("LearningRateScheduler setting learning rate to {}".format(new_rate))
+        return new_rate
+    return scheduler
 

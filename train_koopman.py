@@ -27,17 +27,17 @@ args = gather_args("koopman", num_sizes=2, defaults=Defaults)
 run_name = make_run_name(args)
 
 # Read Data
-X, Xtest = data_from_name("flow_cylinder")
+X, Xtest, imshape = data_from_name(args.dataset)
 datashape = X[0].shape
 print("datashape:", datashape)
 
-def format_data(X, steps):
+def format_data(X, bwd_steps, fwd_steps):
     """
     slice X into sequences of 2*steps+1 snapshots for input to koopman autoencoder
     """
     out = []
-    for i in range(steps+1, X.shape[0]-steps):
-        out.append( X[i-steps:i+steps+1] )
+    for i in range(bwd_steps, X.shape[0]-fwd_steps):
+        out.append( X[i-bwd_steps:i+fwd_steps+1] )
     return np.array(out)
 
 
@@ -49,10 +49,14 @@ models = koopman_autoencoder(
     bwd_wt=args.backward,
     id_wt=args.identity,
     cons_wt=args.consistency,
-    pred_steps=args.pred_steps,
+    forward_steps=args.fwd_steps,
+    backward_steps=args.bwd_steps,
     sizes=args.sizes,
 )
-autoencoder, encoder, forward_dyn, backward_dyn, decoder = models
+if args.bwd_steps > 0:
+    autoencoder, encoder, forward_dyn, backward_dyn, decoder = models
+else:
+    autoencoder, encoder, forward_dyn, decoder = models
 
 optimizer = Adam(
     learning_rate=args.lr, 
@@ -63,25 +67,15 @@ autoencoder.compile(optimizer=optimizer, loss=None)
 
 weights_path = "weights/weights." + run_name + "hdf5"
 
-def lr_schedule(epoch):
-    """
-    reduce lr by half every 1000 epochs
-    """
-    max_divisor = 5
-    divisor = epoch // 1000
-    new_rate = args.lr / (2 ** min(divisor, max_divisor))
-    if epoch % 1000 == 0:
-        print("LearningRateScheduler setting learning rate to {}".format(new_rate))
-    return new_rate
 
 callbacks = [
-    LearningRateScheduler(lr_schedule),
+    LearningRateScheduler(lr_schedule(args)),
     ModelCheckpoint(weights_path, save_best_only=True, save_weights_only=True, 
         verbose=1, period=20),
     TensorBoard(histogram_freq=100, write_graph=False, write_images=True, 
         update_freq=(args.batchsize * 20), embeddings_freq=100),
     ImgWriter(pipeline=(encoder, forward_dyn, decoder), run_name=run_name, 
-        Xtest=Xtest[:-1], Ytest=Xtest[1:], freq=1000),
+        Xtest=Xtest[:-1], Ytest=Xtest[1:], freq=args.epochs//6, imshape=imshape),
 ]
 
 
@@ -90,19 +84,20 @@ print("\n\n\nBegin Training")
 start_time = time.time()
 
 H = autoencoder.fit(
-    x=format_data(X, args.pred_steps),
+    x=format_data(X, args.bwd_steps, args.fwd_steps),
     y=None,
     # steps_per_epoch=3,
     batch_size=args.batchsize,
     epochs=args.epochs,
     callbacks=callbacks,
-    validation_data=(format_data(Xtest, args.pred_steps), None),
+    validation_data=(format_data(Xtest, args.bwd_steps, args.fwd_steps), None),
     # validation_split=0.2,
     # validation_batch_size=args.batchsize,
     verbose=2,
 )
 
-print("Traing took {0} minutes".format((time.time() - start_time)/60))
+print("Training took {0} minutes".format((time.time() - start_time)/60))
+print("{0} seconds per epoch".format((time.time() - start_time)/args.epochs))
 
 if 7000 >= args.epochs >= 3000:
     marker_step = 1000
@@ -112,6 +107,7 @@ else:
 save_history(H, run_name, marker_step=marker_step)
 
 output_eigvals(forward_dyn.weights[0], run_name, type_="forward")
-output_eigvals(backward_dyn.weights[0], run_name, type_="backward")
+if args.bwd_steps > 0:
+    output_eigvals(backward_dyn.weights[0], run_name, type_="backward")
 
 
