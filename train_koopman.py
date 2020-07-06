@@ -31,27 +31,14 @@ X, Xtest = data_from_name("flow_cylinder")
 datashape = X[0].shape
 print("datashape:", datashape)
 
-def data_gen(X, steps, batchsize):
+def format_data(X, steps):
     """
-    yeilds lists of length batchsize, each element as 2*steps+1 consecutive snapshots
+    slice X into sequences of 2*steps+1 snapshots for input to koopman autoencoder
     """
-    i = steps
-    data = []
-    while True:
-        if i+steps >= X.shape[0]:
-            i = steps
-            continue
-        if len(data) == batchsize:
-            yield (np.array(data), None)
-            data = []
-        data.append( X[i-steps:i+steps+1] )
-
-
-def make_val_data(Xtest, steps):
-    Xs = []
-    for i in range(steps+1, Xtest.shape[0]-steps):
-        Xs.append( Xtest[i-steps:i+steps+1] )
-    return (np.array(Xs), None)
+    out = []
+    for i in range(steps+1, X.shape[0]-steps):
+        out.append( X[i-steps:i+steps+1] )
+    return np.array(out)
 
 
 # Create Model
@@ -103,15 +90,15 @@ print("\n\n\nBegin Training")
 start_time = time.time()
 
 H = autoencoder.fit(
-    x=data_gen(X, args.pred_steps, args.batchsize),
+    x=format_data(X, args.pred_steps),
     y=None,
-    steps_per_epoch=3,
-    # batch_size=args.batchsize,
+    # steps_per_epoch=3,
+    batch_size=args.batchsize,
     epochs=args.epochs,
     callbacks=callbacks,
-    validation_data=make_val_data(Xtest, args.pred_steps),
+    validation_data=(format_data(Xtest, args.pred_steps), None),
     # validation_split=0.2,
-    validation_batch_size=args.batchsize,
+    # validation_batch_size=args.batchsize,
     verbose=2,
 )
 

@@ -50,16 +50,6 @@ class FullyConnectedBlock(Layer):
             x = self.batchnorm(x)
         return x
 
-class LogLayer(Layer):
-
-    def __call__(self, x):
-        print("AAAA")
-        print(type(x))
-        print(x.shape)
-        tf.print("AAAAAAAAA", output_stream=sys.stderr)
-        tf.print(x.shape, output_stream=sys.stderr)
-        x = super().__call__(x)
-        return x
 
 class AutoencoderBlock(Layer):
     """
@@ -69,14 +59,12 @@ class AutoencoderBlock(Layer):
     def __init__(self, sizes, name, activate_last=False, batchnorm_last=False):
         super().__init__()
 
-        self.log = LogLayer(name="loglayer")
         self.block1 = FullyConnectedBlock(name+"1", sizes[0])
-        self.block2 = FullyConnectedBlock(name+"1", sizes[1])
-        self.block3 = FullyConnectedBlock(name+"1", sizes[2], activate=activate_last,
+        self.block2 = FullyConnectedBlock(name+"2", sizes[1])
+        self.block3 = FullyConnectedBlock(name+"3", sizes[2], activate=activate_last,
             batchnorm=batchnorm_last)
 
     def call(self, x):
-        # x = self.log(x)
         x = self.block1(x)
         x = self.block2(x)
         x = self.block3(x)

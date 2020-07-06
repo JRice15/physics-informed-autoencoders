@@ -154,7 +154,6 @@ def koopman_autoencoder(snapshot_shape, output_dims, fwd_wt, bwd_wt, id_wt,
     fwd_true = inpt[:,pred_steps+1:,:]
     print("pred shape:", fwd_pred.shape, bwd_pred.shape)
     print("true shape:", fwd_true.shape, bwd_true.shape)
-    tf.print(fwd_true.shape)
     bwd_loss = bwd_wt * tf.reduce_mean((bwd_true - bwd_pred) ** 2)
     fwd_loss = fwd_wt * tf.reduce_mean((fwd_true - fwd_pred) ** 2)
     model.add_loss(bwd_loss)
@@ -167,6 +166,8 @@ def koopman_autoencoder(snapshot_shape, output_dims, fwd_wt, bwd_wt, id_wt,
     id_loss = id_wt * inverse_reg(current, encoder, decoder)
     model.add_loss(id_loss)
     model.add_metric(id_loss, name="id_loss", aggregation="mean")
+
+    # model.summary()
 
     return model, encoder, forward, backward, decoder
 
