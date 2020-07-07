@@ -31,6 +31,7 @@ def gather_args(model_type, num_sizes, defaults):
     parser.add_argument("--name",type=str,required=True,help="name of this training run")
     parser.add_argument("--dataset",type=str,default="flow_cylinder",help="name of dataset")
     parser.add_argument("--lr",type=float,default=defaults.lr,help="learning rate")
+    parser.add_argument("--wd",type=float,default=defaults.wd,help="weight decay weighting factor")
     parser.add_argument("--epochs",type=int,default=defaults.epochs)
     parser.add_argument("--batchsize",type=int,default=defaults.batchsize)
     parser.add_argument("--sizes",type=int,default=defaults.sizes,nargs=num_sizes,help="encoder layer output widths in decreasing order of size")
@@ -88,11 +89,11 @@ def make_dirs(run_name):
 
 def lr_schedule(args):
     """
-    reduce lr by half every (args.epochs // 6) epochs
+    reduce lr by 0.6 every (args.epochs // 6) epochs
     """
     def scheduler(epoch):
-        divisor = epoch // (args.epochs // 6)
-        new_rate = args.lr / (2 ** divisor)
+        exp = epoch // (args.epochs // 6)
+        new_rate = args.lr * (0.4 ** exp)
         if epoch % (args.epochs // 6) == 0:
             print("LearningRateScheduler setting learning rate to {}".format(new_rate))
         return new_rate

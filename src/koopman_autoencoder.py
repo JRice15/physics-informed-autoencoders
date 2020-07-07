@@ -11,6 +11,7 @@ from keras.layers import (Activation, Add, BatchNormalization, Concatenate,
                           ZeroPadding2D, add)
 from keras.models import Model
 from keras.activations import tanh
+from keras import regularizers
 
 from src.regularizers import *
 from src.common import *
@@ -22,6 +23,7 @@ class Defaults:
     namespace for defining arg defaults
     """
     lr = 0.01
+    wd = 0.0
     epochs = 2000
     batchsize = 34
     fwd_steps = 8
@@ -58,9 +60,10 @@ class KoopmanConsistencyLayer(Dense):
     enforce consistency of forward-backward predictions
     """
 
-    def __init__(self, pair_layer, cons_wt, units, name, use_bias=False):
+    def __init__(self, pair_layer, cons_wt, units, name, weight_decay, use_bias=False):
         self.pair_layer = pair_layer
         self.cons_wt = cons_wt
+        self.weight_decay = weight_decay
         super().__init__(
             units=units, 
             name=name, 
@@ -92,6 +95,10 @@ class KoopmanConsistencyLayer(Dense):
             loss = self.cons_wt * loss
 
             self.add_metric(loss, name="cons_loss", aggregation="mean")
+
+            # add weight decay
+            loss += self.weight_decay * tf.reduce_sum(D ** 2)
+
             return loss
         
         return regularizer
@@ -99,7 +106,7 @@ class KoopmanConsistencyLayer(Dense):
 
 
 def koopman_autoencoder(snapshot_shape, output_dims, fwd_wt, bwd_wt, id_wt, 
-        cons_wt, forward_steps, backward_steps, sizes, all_models=False):
+        cons_wt, forward_steps, backward_steps, sizes, weight_decay):
     """
     Create a Koopman autoencoder
     Args:
@@ -120,17 +127,18 @@ def koopman_autoencoder(snapshot_shape, output_dims, fwd_wt, bwd_wt, id_wt,
 
     intermediate, bottleneck = sizes
 
-    encoder = AutoencoderBlock((intermediate, intermediate, bottleneck),
+    encoder = AutoencoderBlock((intermediate, intermediate, bottleneck), weight_decay,
         name="encoder")
     forward = Dense(bottleneck, use_bias=False, name="forward-dynamics",
-        kernel_initializer=glorot_normal())
+        kernel_initializer=glorot_normal(), kernel_regularizer=regularizers.l2(weight_decay))
+    decoder = AutoencoderBlock((intermediate, intermediate, output_dims), weight_decay,
+        name="decoder")
     if backward_steps > 0:
-        # needed to build fwd layer
+        # need to build fwd layer to access its weights in backward ConsistencyLayer
         _ = forward(encoder(current))
         backward = KoopmanConsistencyLayer(pair_layer=forward, cons_wt=cons_wt, 
-            units=bottleneck, use_bias=False, name="backward-dynamics")
-    decoder = AutoencoderBlock((intermediate, intermediate, output_dims),
-        name="decoder")
+            units=bottleneck, use_bias=False, weight_decay=weight_decay,
+            name="backward-dynamics")
 
     # predict pred_steps into the future
     encoded_out = encoder(current)

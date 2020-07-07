@@ -2,6 +2,7 @@
   "name": "orig-paper-cylinder",
   "dataset": "flow_cylinder",
   "lr": 0.01,
+  "wd": 0.0,
   "epochs": 2000,
   "batchsize": 34,
   "sizes": [

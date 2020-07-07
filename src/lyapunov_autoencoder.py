@@ -21,7 +21,8 @@ class Defaults:
     """
     namespace for defining arg defaults
     """
-    lr = 0.001
+    lr = 0.01
+    wd = 1e-6
     epochs = 6000
     batchsize = 34
     lambda_ = 3 # inverse regularizer weight
@@ -68,15 +69,17 @@ class LyapunovStableDense(Dense):
         no_stab (bool): whether to have no stability regularization
     """
 
-    def __init__(self, kappa, gamma=4, no_stab=False, *args, **kwargs):
+    def __init__(self, kappa, weight_decay, gamma=4, no_stab=False, *args, **kwargs):
+        self.weight_decay = weight_decay
+        self.kappa = kappa
+        self.gamma = gamma
         if not no_stab:
             kwargs["kernel_regularizer"] = self.lyapunov_stability_reg()
         super().__init__(*args, 
             kernel_initializer=glorot_normal(),
             bias_initializer=zeros(),
             **kwargs)
-        self.kappa = kappa
-        self.gamma = gamma
+
 
     def lyapunov_stability_reg(self):
         """
@@ -107,6 +110,9 @@ class LyapunovStableDense(Dense):
 
             self.add_metric(value=loss, name="stability_loss", aggregation='mean')
 
+            # add weight decay
+            loss += self.weight_decay * tf.reduce_sum(omega ** 2)
+
             return loss
         
         return stability_regularizer
@@ -114,7 +120,7 @@ class LyapunovStableDense(Dense):
 
 
 def lyapunov_autoencoder(snapshot_shape, output_dims, lambda_, kappa, gamma,
-        no_stability, sizes):
+        no_stability, sizes, weight_decay):
     """
     Create a lyapunov autoencoder model
     Args:
@@ -131,11 +137,12 @@ def lyapunov_autoencoder(snapshot_shape, output_dims, lambda_, kappa, gamma,
 
     large, medium, small = sizes
 
-    encoder = AutoencoderBlock((large, medium, small), name="encoder", 
+    encoder = AutoencoderBlock((large, medium, small), weight_decay, name="encoder", 
         batchnorm_last=True)
-    dynamics = LyapunovStableDense(kappa=kappa, gamma=gamma, no_stab=no_stability,
-        units=small, name="lyapunovstable-dynamics")
-    decoder = AutoencoderBlock((medium, large, output_dims), name="decoder")
+    dynamics = LyapunovStableDense(kappa=kappa, gamma=gamma, weight_decay=weight_decay,
+        no_stab=no_stability, units=small, name="lyapunovstable-dynamics")
+    decoder = AutoencoderBlock((medium, large, output_dims), weight_decay,
+        name="decoder")
 
     x = encoder(inpt)
     x = dynamics(x)

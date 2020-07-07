@@ -12,6 +12,7 @@ from keras.layers import (Activation, Add, BatchNormalization, Concatenate,
                           ZeroPadding2D, add)
 from keras.models import Model
 from keras.activations import tanh
+from keras import regularizers
 
 from src.regularizers import *
 from src.common import *
@@ -27,12 +28,13 @@ class FullyConnectedBlock(Layer):
     Dense layer with optional TanH activation and/or Batchnorm
     """
 
-    def __init__(self, name, output_dims, activate=True, batchnorm=False):
+    def __init__(self, name, output_dims, weight_decay, activate=True, batchnorm=False):
         super().__init__()
 
         self.dense = Dense(output_dims,
             kernel_initializer=glorot_normal(), # aka Xavier Normal
             bias_initializer=zeros(),
+            kernel_regularizer=regularizers.l2(weight_decay), # weight decay
             name=name+"-dense"
         )
         self.activation = None
@@ -56,13 +58,13 @@ class AutoencoderBlock(Layer):
     block of 3 fully connected layers, either for encoder or decoder
     """
 
-    def __init__(self, sizes, name, activate_last=False, batchnorm_last=False):
+    def __init__(self, sizes, weight_decay, name, activate_last=False, batchnorm_last=False):
         super().__init__()
 
-        self.block1 = FullyConnectedBlock(name+"1", sizes[0])
-        self.block2 = FullyConnectedBlock(name+"2", sizes[1])
-        self.block3 = FullyConnectedBlock(name+"3", sizes[2], activate=activate_last,
-            batchnorm=batchnorm_last)
+        self.block1 = FullyConnectedBlock(name+"1", sizes[0], weight_decay)
+        self.block2 = FullyConnectedBlock(name+"2", sizes[1], weight_decay)
+        self.block3 = FullyConnectedBlock(name+"3", sizes[2], weight_decay, 
+            activate=activate_last, batchnorm=batchnorm_last)
 
     def call(self, x):
         x = self.block1(x)
