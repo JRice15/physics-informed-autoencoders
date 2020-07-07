@@ -22,9 +22,9 @@ print("Keras version:", keras.__version__) # 2.4.3
 
 
 # Initialization actions
-make_dirs()
 args = gather_args("koopman", num_sizes=2, defaults=Defaults)
 run_name = make_run_name(args)
+make_dirs(run_name)
 
 # Read Data
 X, Xtest, imshape = data_from_name(args.dataset)

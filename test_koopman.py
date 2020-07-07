@@ -22,9 +22,9 @@ from src.read_dataset import *
 print("Tensorflow version:", tf.__version__) # 2.2.0
 print("Keras version:", keras.__version__) # 2.4.3
 
-make_dirs()
 args = gather_args("koopman", 2, Defaults)
 run_name = make_run_name(args)
+os.makedirs("test_results/" + run_name, exist_ok=True)
 
 # Read Data
 X, Xtest, imshape = data_from_name("flow_cylinder")
@@ -77,9 +77,9 @@ def run_test(weights_path, data, name, num_steps=50):
             step_mse.append(mse)
 
             if step % 10 == 0 and i == 7:
-                write_im(pred, imshape, title=str(step) + " steps prediction", 
+                write_im(pred, title=str(step) + " steps prediction", 
                     filename=name + "_step" + str(step), directory="test_results" )
-                write_im(true, imshape, title=str(step) + " steps ground truth", 
+                write_im(true, title=str(step) + " steps ground truth", 
                     filename="truth_step" + str(step), directory="test_results")
         
         mean_mse = np.mean(step_mse)
@@ -124,3 +124,4 @@ else:
     plt.savefig("test_results/multistep_mse_" + dnames[0] + "_vs_" + dnames[1] + ".png")
 
 print("Results have been save to 'test_results/'")
+

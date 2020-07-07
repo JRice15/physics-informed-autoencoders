@@ -23,9 +23,9 @@ from src.read_dataset import *
 print("Tensorflow version:", tf.__version__) # 2.2.0
 print("Keras version:", keras.__version__) # 2.4.3
 
-make_dirs()
 args = gather_args("lyapunov", 3, Defaults)
 run_name = make_run_name(args)
+os.makedirs("test_results/" + run_name, exist_ok=True)
 
 # Read Data
 X, Xtest = data_from_name("flow_cylinder")

@@ -75,12 +75,11 @@ def gather_args(model_type, num_sizes, defaults):
     return args
 
 
-def make_dirs():
+def make_dirs(run_name):
     os.makedirs("data", exist_ok=True)
     os.makedirs("weights", exist_ok=True)
-    os.makedirs("train_results", exist_ok=True)
-    os.makedirs("test_results", exist_ok=True)
-    os.makedirs("stats", exist_ok=True)
+    os.makedirs("train_results/" + run_name, exist_ok=True)
+    os.makedirs("stats/" + run_name, exist_ok=True)
     if os.path.exists("logs"):
         print("Removing old Tensorboard logs...")
         shutil.rmtree("logs")
