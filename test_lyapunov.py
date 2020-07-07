@@ -15,20 +15,19 @@ from keras import Input
 from keras.models import Model
 
 from src.common import *
-from src.lyapunov_autoencoder import (Defaults, lyapunov_autoencoder,
-                                      make_run_name)
+from src.lyapunov_autoencoder import *
 from src.output_results import *
 from src.read_dataset import *
+from src.testing import *
 
 print("Tensorflow version:", tf.__version__) # 2.2.0
 print("Keras version:", keras.__version__) # 2.4.3
 
 args = gather_args("lyapunov", 3, Defaults)
 run_name = make_run_name(args)
-os.makedirs("test_results/" + run_name, exist_ok=True)
 
 # Read Data
-X, Xtest = data_from_name("flow_cylinder")
+X, Xtest, imshape = data_from_name("flow_cylinder")
 datashape = X[0].shape
 data = np.concatenate([X, Xtest], axis=0)
 
@@ -41,50 +40,7 @@ models = lyapunov_autoencoder(
     gamma=args.gamma,
     no_stability=args.no_stability,
     sizes=args.sizes,
-    all_models=True,
 )
-autoencoder, encoder, dynamics, decoder = models
-
-def run_test(weights_path, data, name, num_steps=50):
-    """
-    test a set of weights with multi-step prediction
-    """
-    autoencoder.load_weights(weights_path)
-
-    num_snapshots = data.shape[0]
-    data = np.reshape(data, (1, num_snapshots, -1))
-    tfdata = tf.convert_to_tensor(data)
-
-    error = []
-
-    print("\n")
-    print(weights_path)
-    for step in range(1, num_steps+1):
-        step_mse = []
-        for i in range(num_snapshots - num_steps):
-            snapshot = tfdata[:,i,:]
-
-            x = encoder(snapshot)
-            for _ in range(step):
-                x = dynamics(x)
-            pred = decoder(x).numpy()
-
-            true = data[:,i+step,:]
-            mse = np.mean((true - pred) ** 2)
-            step_mse.append(mse)
-
-            if step % 10 == 0 and i == 7:
-                write_im(pred, title=str(step) + " steps prediction", 
-                    filename=name + "_step" + str(step), directory="test_results" )
-                write_im(true, title=str(step) + " steps ground truth", 
-                    filename="truth_step" + str(step), directory="test_results")
-        
-        mean_mse = np.mean(step_mse)
-        print(step, "steps MSE:", mean_mse)
-        error.append(mean_mse)
-    
-    print("")
-    return error
 
 
 run_name = make_run_name(args)
@@ -102,11 +58,11 @@ if yn.lower().strip() == "y":
 
     name2 = re.sub(r"\s", "_", input("Name for second chosen weights: "))
 
-    error1 = run_test(weights_path, data, args.name)
-    error2 = run_test(weights2_path, data, name2)
+    error1 = run_test(models, weights_path, data, args.name)
+    error2 = run_test(models, weights2_path, data, name2)
     dnames = (args.name, name2)
 else:
-    error1 = run_test(weights_path, data, args.name)
+    error1 = run_test(models, weights_path, data, args.name)
     error2 = None
     dnames = (args.name,None)
 
@@ -116,8 +72,8 @@ make_plot(xrange=xrange, data=(error1, error2), dnames=dnames, title="MSE for Mu
     marker_step=(len(error1) // 6))
 
 if dnames[1] is None:
-    plt.savefig("test_results/multistep_mse_" + dnames[0] + ".png")
+    plt.savefig("test_results/" + dnames[0] + "_multistep_mse.png")
 else:
-    plt.savefig("test_results/multistep_mse_" + dnames[0] + "_vs_" + dnames[1] + ".png")
+    plt.savefig("test_results/" + dnames[0] + "_vs_" + dnames[1] + "_multistep_mse.png")
 
 print("Results have been save to 'test_results/'")
