@@ -38,7 +38,7 @@ def make_run_name(args):
     else:
         run_name += "stability."
     run_name += "l{}_k{}_g{}.".format(args.lambd, args.kappa, args.gamma)
-    run_name += "{}epochs_{}batchsize_{}lr.".format(args.epochs, args.batchsize, args.lr)
+    run_name += "{}epochs_{}batchsize_{}lr_{}wd.".format(args.epochs, args.batchsize, args.lr, args.wd)
     run_name += "s{}_{}_{}.".format(*args.sizes)
     return run_name
 

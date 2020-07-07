@@ -45,7 +45,8 @@ models = lyapunov_autoencoder(
     lambda_=args.lambd,
     gamma=args.gamma,
     no_stability=args.no_stability,
-    sizes=args.sizes
+    sizes=args.sizes,
+    weight_decay=args.wd,
 )
 autoencoder, encoder, dynamics, decoder = models
 

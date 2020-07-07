@@ -23,7 +23,7 @@ class Defaults:
     namespace for defining arg defaults
     """
     lr = 0.01
-    wd = 0.0
+    wd = 0
     epochs = 2000
     batchsize = 34
     fwd_steps = 8
@@ -40,7 +40,7 @@ def make_run_name(args):
     run_name = args.name + ".koopman."
     run_name += "{}f_{}b_steps.".format(args.fwd_steps, args.bwd_steps)
     run_name += "f{}_b{}_i{}_c{}.".format(args.forward, args.backward, args.identity, args.consistency)
-    run_name += "{}epochs_{}batchsize_{}lr.".format(args.epochs, args.batchsize, args.lr)
+    run_name += "{}epochs_{}batchsize_{}lr_{}wd.".format(args.epochs, args.batchsize, args.lr, args.wd)
     run_name += "s{}_{}.".format(*args.sizes)
     return run_name
 

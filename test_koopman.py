@@ -41,6 +41,7 @@ models = koopman_autoencoder(
     forward_steps=args.fwd_steps,
     backward_steps=args.bwd_steps,
     sizes=args.sizes,
+    weight_decay=args.wd,
 )
 if args.bwd_steps > 0:
     autoencoder, encoder, dynamics, backward_dyn, decoder = models
