@@ -28,8 +28,9 @@ class ImgWriter(Callback):
         self.dynamics = dynamics
         self.decoder = decoder
         self.freq = freq
-        self.run_name = run_name
         self.imshape = imshape
+        self.dir = "train_results/" + run_name
+        self.run_name = run_name
         self.X = tf.reshape(Xtest[7], (1, -1))
         write_im(Ytest[7], "Target Y(t+1)", "target_outlined", "train_results", outline=True)
         write_im(Ytest[7], "Target Y(t+1)", "target", "train_results")
@@ -42,9 +43,9 @@ class ImgWriter(Callback):
             result = self.decoder(self.dynamics(self.encoder(self.X)))
             write_im(
                 im=K.eval(result),
-                title="Epoch {} Prediction".format(epoch+1),
-                filename=self.run_name + "__pred_epoch_{}.".format(epoch+1),
-                directory="train_results"
+                title="Epoch {} Prediction".format(epoch+1) + "\n" + self.run_name,
+                filename="pred_epoch_{}.".format(epoch+1),
+                directory=self.dir
             )
 
 
@@ -113,10 +114,11 @@ def save_history(H: History, run_name, marker_step=1000, skip=200):
                 mark = 0
             data = (train_data, valdata)
             xrange = list(range(skip, len(train_data)+skip))
+            title = k + "\n" + run_name
             make_plot(xrange=xrange, data=data, axlabels=("epoch",k), mark=mark,
-                dnames=("train","validation"), title=k, marker_step=marker_step,
+                dnames=("train","validation"), title=title, marker_step=marker_step,
                 skipshift=skip)
-            plt.savefig("stats/" + run_name + "__" + k + ".png")
+            plt.savefig("stats/" + run_name + "/" + k + ".png")
             plt.close()
 
 
@@ -158,7 +160,7 @@ def make_plot(xrange, data, title, axlabels, dnames=None, marker_step=1,
         valstr = get_num_str(mark_data[-1])
         ytext = 5 if up else -12
         plt.annotate(valstr, xy=(len(mark_data)-1+skipshift, mark_data[-1]), xytext=(1,ytext), textcoords="offset points")
-        plt.plot(len(mark_data)-1, mark_data[-1], marker=".", color="green")
+        plt.plot(len(mark_data)-1+skipshift, mark_data[-1], marker=".", color="green")
 
     plt.title(title)
     plt.xlabel(axlabels[0])
