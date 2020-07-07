@@ -16,8 +16,8 @@ def run_test(models, weights_path, data, name, num_steps=50):
     """
     autoencoder, encoder, dynamics, decoder = models
 
-    run_name = run_name_from_weights(weights_path)
-    os.makedirs("test_results/" + run_name, exist_ok=True)
+    dirname = run_name_from_weights(weights_path).strip(".")
+    os.makedirs("test_results/" + dirname, exist_ok=True)
 
     try:
         autoencoder.load_weights(weights_path)
@@ -49,7 +49,7 @@ def run_test(models, weights_path, data, name, num_steps=50):
 
             if step % 10 == 0 and i == 7:
                 write_im(pred, title=str(step) + " steps prediction", 
-                    filename="pred_step" + str(step), directory="test_results/"+run_name )
+                    filename="pred_step" + str(step), directory="test_results/"+dirname )
                 write_im(true, title=str(step) + " steps ground truth", 
                     filename="truth_step" + str(step), directory="test_results")
         

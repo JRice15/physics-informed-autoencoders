@@ -203,10 +203,10 @@ def output_eigvals(weight_matrix, name, directory="stats", type_=None):
     plt.tight_layout()
     # plt.show()
 
-    end = "__eigvals"
+    end = "eigvals"
     if type_ is not None:
         end += "." + type_
-    plt.savefig(directory + '/' + name + end + '.png')
+    plt.savefig(directory + '/' + name.strip(".") + "/" + end + '.png')
     plt.close()
 
 
