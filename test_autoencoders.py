@@ -15,6 +15,7 @@ from keras.models import Model
 
 from src.autoencoders import *
 from src.lyapunov_autoencoder import *
+from src.koopman_autoencoder import *
 from src.output_results import *
 from src.read_dataset import *
 from src.testing import *
@@ -42,7 +43,7 @@ def get_pipeline(model):
         if len(dynamics_2) != 1:
             raise ValueError("{} dynamics layers found, could not resolve forward/backward: {}".format(len(dynamics), dynamics))
         dynamics = dynamics_2
-    decoders = [i for i in model.layers if "encoder" in i.name]
+    decoders = [i for i in model.layers if "decoder" in i.name]
     if len(decoders) != 1:
         raise ValueError("{} decoder layers found: {}".format(len(decoders), decoders))
     return encoders + dynamics + decoders
@@ -55,9 +56,9 @@ data = np.concatenate([X, Xtest], axis=0)
 
 
 def run_name_from_model_path(model_path):
-    name = re.sub(r".*/models\.", "", model_path)
-    name = re.sub(r"\.hdf5", "", name)
-    return name
+    model_path = re.sub(r".*/models/model\.", "", model_path)
+    model_path = re.sub(r"\.hdf5", "", model_path)
+    return model_path
 
 
 def run_one_test(model_path, data, num_steps):
@@ -133,7 +134,7 @@ for p in paths:
     results.append(error)
 
 xrange = list(range(len(results[0])))
-make_plot(xrange=xrange, data=results, dnames=names, title="MSE of Multi-Step Predictions", 
+make_plot(xrange=xrange, data=tuple(results), dnames=names, title="MSE of Multi-Step Predictions", 
     mark=0, axlabels=("steps", "mean squared error"), legendloc="upper left",
     marker_step=(len(results[0]) // 6))
 

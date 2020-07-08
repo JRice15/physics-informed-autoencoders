@@ -2,7 +2,7 @@ import keras.backend as K
 import numpy as np
 import tensorflow as tf
 from keras import Input
-from keras.initializers import glorot_normal, zeros
+from keras.initializers import glorot_normal, zeros, Initializer
 from keras.layers import (Activation, Add, BatchNormalization, Concatenate,
                           Conv2D, Cropping2D, Dense, Dropout,
                           GlobalAveragePooling2D, GlobalMaxPooling2D,
@@ -18,14 +18,27 @@ from src.autoencoders import *
 from src.output_results import *
 
 
-class InverseDynamicsInitializer():
+class InverseDynamicsInitializer(Initializer):
+    """
+    initialize a layers weights to be the (pseudo-)inverse of another layer's
+    """
 
-    def __init__(self, pair_layer):
-        self.pair_weights = pair_layer.weights[0]
+    def __init__(self, in_shape, pair_layer):
+        self.in_shape = in_shape
+        # build pair layer
+        _ = pair_layer(Input(in_shape))
+        self.pair_layer = pair_layer
     
     def __call__(self, shape, dtype=None):
-        assert self.pair_weights.shape == shape
-        return tf.linalg.pinv(tf.transpose(self.pair_weights))
+        pair_weights = self.pair_layer.weights[0]
+        assert pair_weights.shape == shape
+        return tf.linalg.pinv(tf.transpose(pair_weights))
+
+    def get_config(self):
+        return {
+            "pair_layer": self.pair_layer,
+            "in_shape": self.in_shape
+        }
 
 
 class KoopmanConsistencyLayer(Dense):
@@ -33,12 +46,13 @@ class KoopmanConsistencyLayer(Dense):
     enforce consistency of forward-backward predictions
     """
 
-    def __init__(self, pair_layer, cons_wt, units, name, weight_decay, 
+    def __init__(self, in_shape, pair_layer, cons_wt, units, name, weight_decay, 
             use_bias=False, *args, **kwargs):
+        self.in_shape = in_shape
         self.pair_layer = pair_layer
         self.cons_wt = cons_wt
         self.weight_decay = weight_decay
-        kwargs["kernel_initializer"] = InverseDynamicsInitializer(pair_layer)
+        kwargs["kernel_initializer"] = InverseDynamicsInitializer(in_shape, pair_layer)
         kwargs["kernel_regularizer"] = self.consistency_reg()
         kwargs["bias_initializer"] = zeros()
         super().__init__(
@@ -85,6 +99,7 @@ class KoopmanConsistencyLayer(Dense):
             "pair_layer": self.pair_layer,
             "cons_wt": self.cons_wt,
             "weight_decay": self.weight_decay,
+            "in_shape": self.in_shape
         })
         return config
 
@@ -157,8 +172,9 @@ class KoopmanAutoencoder(BaseAE):
             name="decoder")
         if self.has_bwd:
             # need to build fwd layer to access its weights in backward ConsistencyLayer
-            _ = forward(encoder(current))
-            backward = KoopmanConsistencyLayer(pair_layer=forward, cons_wt=cons_wt, 
+            inshape = encoder(current).shape
+            backward = KoopmanConsistencyLayer(in_shape=inshape, 
+                pair_layer=forward, cons_wt=cons_wt, 
                 units=bottleneck, use_bias=False, weight_decay=weight_decay,
                 name="backward-dynamics")
 
