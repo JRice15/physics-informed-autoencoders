@@ -57,7 +57,7 @@ optimizer = Adam(
 autoencoder.compile(optimizer=optimizer, loss=mse, metrics=[metrics.MeanSquaredError()])
     # experimental_run_tf_function=False)
 
-weights_path = "weights/weights." + run_name + ".hdf5"
+weights_path = "weights/weights." + run_name + "hdf5"
 
 callbacks = [
     # ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=100, 

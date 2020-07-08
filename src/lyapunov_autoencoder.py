@@ -34,11 +34,11 @@ class Defaults:
 def make_run_name(args):
     run_name = args.name + ".lyapunov."
     if args.no_stability:
-        run_name += "nostability."
+        run_name += "nostabl."
     else:
-        run_name += "stability."
+        run_name += "stabl."
     run_name += "l{}_k{}_g{}.".format(args.lambd, args.kappa, args.gamma)
-    run_name += "{}epochs_{}batchsize_{}lr_{}wd.".format(args.epochs, args.batchsize, args.lr, args.wd)
+    run_name += "{}ep_{}bs_{}lr_{}wd.".format(args.epochs, args.batchsize, args.lr, args.wd)
     run_name += "s{}_{}_{}.".format(*args.sizes)
     return run_name
 
