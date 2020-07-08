@@ -112,7 +112,7 @@ class KoopmanAutoencoder(BaseAE):
         """
         lr = 0.01
         wd = 5e-4
-        gradclip=0.05
+        gradclip=0.5
         epochs = 2000
         batchsize = 34
         fwd_steps = 8
@@ -234,7 +234,7 @@ class KoopmanAutoencoder(BaseAE):
 
     def make_run_name(self):
         args = self.args
-        run_name = args.name + ".koopman."
+        run_name = args.name + ".koop.{}_".format(args.seed)
         run_name += "{}f_{}b_steps.".format(args.fwd_steps, args.bwd_steps)
         run_name += "f{}_b{}_i{}_c{}.".format(args.forward, args.backward, args.identity, args.consistency)
         run_name += "{}ep_{}bs_{}lr_{}wd.".format(args.epochs, args.batchsize, args.lr, args.wd)

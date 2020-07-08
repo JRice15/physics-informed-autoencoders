@@ -60,7 +60,7 @@ parser.add_argument("--name",type=str,required=True,help="name of this training 
 parser.add_argument("--dataset",type=str,default="flow_cylinder",help="name of dataset")
 parser.add_argument("--lr",type=float,default=defaults.lr,help="learning rate")
 parser.add_argument("--wd",type=float,default=defaults.wd,help="weight decay weighting factor")
-parser.add_argument("--gradclip",type=float,default=defaults.gradclip,help="gradient clipping by norm")
+parser.add_argument("--gradclip",type=float,default=defaults.gradclip,help="gradient clipping by norm, or 0 for no gradclipping")
 parser.add_argument("--seed",type=int,default=0,help="random seed")
 parser.add_argument("--epochs",type=int,default=defaults.epochs)
 parser.add_argument("--batchsize",type=int,default=defaults.batchsize)
@@ -144,9 +144,10 @@ callbacks = [
         Xtest=Xtest[:-1], Ytest=Xtest[1:], freq=args.epochs//5, imshape=imshape),
 ]
 
+gradclip = None if args.gradclip == 0 else args.gradclip
 optimizer = Adam(
     learning_rate=args.lr,
-    clipnorm=args.gradclip
+    clipnorm=gradclip
 )
 
 autoencoder.compile_model(optimizer)
