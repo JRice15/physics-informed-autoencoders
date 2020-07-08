@@ -114,9 +114,8 @@ def save_history(H: History, run_name, marker_step=1000, skip=200):
                 mark = 0
             data = (train_data, valdata)
             xrange = list(range(skip, len(train_data)+skip))
-            title = k + "\n" + run_name.strip(".")
-            make_plot(xrange=xrange, data=data, axlabels=("epoch",k), mark=mark,
-                dnames=("train","validation"), title=title, marker_step=marker_step,
+            make_plot(xrange=xrange, data=data, axlabels=(run_name.strip("."),k), mark=mark,
+                dnames=("train","validation"), title=k + " by epoch", marker_step=marker_step,
                 skipshift=skip)
             plt.savefig("stats/" + run_name.strip(".") + "/" + k + ".png")
             plt.close()
@@ -139,7 +138,8 @@ def make_plot(xrange, data, title, axlabels, dnames=None, marker_step=1,
             continue
         if i == mark:
             mark_data = data[i]
-            plt.plot(xrange, data[i], marker=".", markevery=marker_step)
+            plt.plot(xrange, data[i], marker=".", markevery=marker_step, mfc="black", mec="black",
+                markersize=5)
         else:
             plt.plot(xrange, data[i])
 

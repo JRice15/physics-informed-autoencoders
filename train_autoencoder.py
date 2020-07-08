@@ -117,12 +117,12 @@ make_dirs(run_name)
 
 def lr_schedule(args):
     """
-    reduce lr by 0.6 every (args.epochs // 6) epochs
+    reduce lr by 0.6 every (args.epochs // 5) epochs
     """
     def scheduler(epoch):
-        exp = epoch // (args.epochs // 6)
+        exp = epoch // (args.epochs // 5)
         new_rate = args.lr * (0.4 ** exp)
-        if epoch % (args.epochs // 6) == 0:
+        if epoch % (args.epochs // 5) == 0:
             print("LearningRateScheduler setting learning rate to {}".format(new_rate))
         return new_rate
     return scheduler
@@ -136,7 +136,7 @@ callbacks = [
     TensorBoard(histogram_freq=100, write_graph=False, write_images=True, 
         update_freq=(args.batchsize * 20), embeddings_freq=100),
     ImgWriter(pipeline=autoencoder.get_pipeline(), run_name=run_name, 
-        Xtest=Xtest[:-1], Ytest=Xtest[1:], freq=args.epochs//6, imshape=imshape),
+        Xtest=Xtest[:-1], Ytest=Xtest[1:], freq=args.epochs//5, imshape=imshape),
 ]
 
 optimizer = Adam(
@@ -158,7 +158,7 @@ print("{0} seconds per epoch".format((time.time() - start_time)/args.epochs))
 if 7000 >= args.epochs >= 3000:
     marker_step = 1000
 else:
-    marker_step = args.epochs // 6
+    marker_step = args.epochs // 5
 
 save_history(H, run_name, marker_step=marker_step)
 
