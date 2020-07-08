@@ -29,8 +29,8 @@ class ImgWriter(Callback):
         self.decoder = decoder
         self.freq = freq
         self.imshape = imshape
-        self.dir = "train_results/" + run_name
-        self.run_name = run_name
+        self.dir = "train_results/" + run_name.strip(".")
+        self.run_name = run_name.strip(".")
         self.X = tf.reshape(Xtest[7], (1, -1))
         write_im(Ytest[7], "Target Y(t+1)", "target_outlined", "train_results", outline=True)
         write_im(Ytest[7], "Target Y(t+1)", "target", "train_results")
@@ -114,11 +114,11 @@ def save_history(H: History, run_name, marker_step=1000, skip=200):
                 mark = 0
             data = (train_data, valdata)
             xrange = list(range(skip, len(train_data)+skip))
-            title = k + "\n" + run_name
+            title = k + "\n" + run_name.strip(".")
             make_plot(xrange=xrange, data=data, axlabels=("epoch",k), mark=mark,
                 dnames=("train","validation"), title=title, marker_step=marker_step,
                 skipshift=skip)
-            plt.savefig("stats/" + run_name + "/" + k + ".png")
+            plt.savefig("stats/" + run_name.strip(".") + "/" + k + ".png")
             plt.close()
 
 
