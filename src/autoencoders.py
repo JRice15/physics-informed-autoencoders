@@ -1,21 +1,22 @@
 import sys
+import abc
+
 import keras.backend as K
 import numpy as np
 import tensorflow as tf
-from keras import Input
+from keras import Input, regularizers
+from keras.activations import tanh
 from keras.initializers import glorot_normal, zeros
 from keras.layers import (Activation, Add, BatchNormalization, Concatenate,
                           Conv2D, Cropping2D, Dense, Dropout,
-                          GlobalAveragePooling2D, GlobalMaxPooling2D,
-                          Lambda, Layer, LeakyReLU, MaxPooling2D, ReLU,
-                          Reshape, Softmax, Subtract, UpSampling2D,
-                          ZeroPadding2D, add)
+                          GlobalAveragePooling2D, GlobalMaxPooling2D, Lambda,
+                          Layer, LeakyReLU, MaxPooling2D, ReLU, Reshape,
+                          Softmax, Subtract, UpSampling2D, ZeroPadding2D, add)
 from keras.models import Model
-from keras.activations import tanh
-from keras import regularizers
 
-from src.regularizers import *
 from src.common import *
+from src.regularizers import *
+
 
 """
 generic autoencoder building blocks to be used between implementations
@@ -72,3 +73,42 @@ class AutoencoderBlock(Layer):
         x = self.block3(x)
         return x
 
+
+
+class BaseAE(abc.ABC):
+    """
+    base container class for autoencoders
+    """
+
+    def __init__(self, args):
+        self.args = args
+
+    @abc.abstractmethod
+    def build_model(self, args):
+        ...
+
+    @abc.abstractmethod
+    def make_run_name(self):
+        ...
+    
+    @abc.abstractmethod
+    def format_data(self, X, Xtest):
+        ...
+
+    @abc.abstractmethod
+    def train(self, callbacks):
+        """
+        call model.fit, return History
+        """
+        ...
+
+    @abc.abstractmethod
+    def get_pipeline(self):
+        """
+        get forward prediction pipeline
+        """
+        ...
+
+    @abc.abstractmethod
+    def save_eigenvals(self):
+        ...

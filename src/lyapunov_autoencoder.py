@@ -11,36 +11,12 @@ from keras.layers import (Activation, Add, BatchNormalization, Concatenate,
                           ZeroPadding2D, add)
 from keras.models import Model
 from keras.activations import tanh
+from keras import metrics, losses
 
 from src.regularizers import *
 from src.common import *
 from src.autoencoders import *
-
-
-class Defaults:
-    """
-    namespace for defining arg defaults
-    """
-    lr = 0.01
-    wd = 1e-6
-    epochs = 6000
-    batchsize = 34
-    lambda_ = 3 # inverse regularizer weight
-    kappa = 3 # stability regularizer weight
-    gamma = 4 # stability regularizer steepness
-    sizes = (40, 25, 15) # largest to smallest
-
-
-def make_run_name(args):
-    run_name = args.name + ".lyapunov."
-    if args.no_stability:
-        run_name += "nostabl."
-    else:
-        run_name += "stabl."
-    run_name += "l{}_k{}_g{}.".format(args.lambd, args.kappa, args.gamma)
-    run_name += "{}ep_{}bs_{}lr_{}wd.".format(args.epochs, args.batchsize, args.lr, args.wd)
-    run_name += "s{}_{}_{}.".format(*args.sizes)
-    return run_name
+from src.output_results import *
 
 
 def vec(X):
@@ -119,47 +95,115 @@ class LyapunovStableDense(Dense):
 
 
 
-def lyapunov_autoencoder(snapshot_shape, output_dims, lambda_, kappa, gamma,
-        no_stability, sizes, weight_decay):
-    """
-    Create a lyapunov autoencoder model
-    Args:
-        snapshot_shape (tuple of int): shape of snapshots, without batchsize or channels
-        output_dims (int): number of output channels
-        lambda_ (float): weighting factor for inverse regularizer
-        kappa (float): weighting factor for stability regularizer
-        sizes (tuple of int): depth of layers in decreasing order of size. default (40,25,15)
-    Returns:
-        4 Keras Model of the autoencoder
-    """
-    inpt = Input(snapshot_shape)
-    print("Autoencoder Input shape:", inpt.shape)
+class LyapunovAutoencoder(BaseAE):
 
-    large, medium, small = sizes
-
-    encoder = AutoencoderBlock((large, medium, small), weight_decay, name="encoder", 
-        batchnorm_last=True)
-    dynamics = LyapunovStableDense(kappa=kappa, gamma=gamma, weight_decay=weight_decay,
-        no_stab=no_stability, units=small, name="lyapunovstable-dynamics")
-    decoder = AutoencoderBlock((medium, large, output_dims), weight_decay,
-        name="decoder")
-
-    x = encoder(inpt)
-    x = dynamics(x)
-    x = decoder(x)
-
-    model = Model(inpt, x)
-
-    # inverse regularizer of encoder-decoder
-    inv_loss = lambda_ * inverse_reg(inpt, encoder, decoder)
-
-    model.add_loss(inv_loss)
-    model.add_metric(inv_loss, name="inverse_loss", aggregation='mean')
-
-    return model, encoder, dynamics, decoder
+    class Defaults:
+        """
+        namespace for defining arg defaults
+        """
+        lr = 0.01
+        wd = 1e-6
+        epochs = 6000
+        batchsize = 34
+        lambda_ = 3 # inverse regularizer weight
+        kappa = 3 # stability regularizer weight
+        gamma = 4 # stability regularizer steepness
+        sizes = (40, 25, 15) # largest to smallest
 
 
+    def __init__(self, args, datashape, optimizer):
+        super().__init__(args)
+        self.build_model(
+            snapshot_shape=datashape,
+            output_dims=datashape[-1],
+            kappa=args.kappa,
+            lambda_=args.lambd,
+            gamma=args.gamma,
+            no_stability=args.no_stability,
+            sizes=args.sizes,
+            weight_decay=args.wd,
+        )
+        self.model.compile(optimizer=optimizer, loss=losses.mse, 
+            metrics=[metrics.MeanSquaredError()])
 
 
+    def build_model(self, snapshot_shape, output_dims, lambda_, kappa, gamma,
+            no_stability, sizes, weight_decay):
+        """
+        Create a lyapunov autoencoder model
+        Args:
+            snapshot_shape (tuple of int): shape of snapshots, without batchsize or channels
+            output_dims (int): number of output channels
+            lambda_ (float): weighting factor for inverse regularizer
+            kappa (float): weighting factor for stability regularizer
+            sizes (tuple of int): depth of layers in decreasing order of size. default (40,25,15)
+        """
+        inpt = Input(snapshot_shape)
+        print("Autoencoder Input shape:", inpt.shape)
 
+        large, medium, small = sizes
 
+        encoder = AutoencoderBlock((large, medium, small), weight_decay, name="encoder", 
+            batchnorm_last=True)
+        dynamics = LyapunovStableDense(kappa=kappa, gamma=gamma, weight_decay=weight_decay,
+            no_stab=no_stability, units=small, name="lyapunovstable-dynamics")
+        decoder = AutoencoderBlock((medium, large, output_dims), weight_decay,
+            name="decoder")
+
+        x = encoder(inpt)
+        x = dynamics(x)
+        x = decoder(x)
+
+        model = Model(inpt, x)
+
+        # inverse regularizer of encoder-decoder
+        inv_loss = lambda_ * inverse_reg(inpt, encoder, decoder)
+
+        model.add_loss(inv_loss)
+        model.add_metric(inv_loss, name="inverse_loss", aggregation='mean')
+
+        self.model = model
+        self.encoder = encoder
+        self.dynamics = dynamics
+        self.decoder = decoder
+    
+    def make_run_name(self):
+        args = self.args
+        run_name = args.name + ".lyapunov."
+        if args.no_stability:
+            run_name += "nostabl."
+        else:
+            run_name += "stabl."
+        run_name += "l{}_k{}_g{}.".format(args.lambd, args.kappa, args.gamma)
+        run_name += "{}ep_{}bs_{}lr_{}wd.".format(args.epochs, args.batchsize, args.lr, args.wd)
+        run_name += "s{}_{}_{}.".format(*args.sizes)
+        return run_name
+
+    def format_data(self, X, Xtest):
+        # targets one timestep ahead of inputs
+        self.Y = X[:-1]
+        self.X = X[1:]
+        Ytest = Xtest[:-1]
+        Xtest = Xtest[1:]
+        self.val_data = (Xtest, Ytest)
+
+    def train(self, callbacks):
+        H = self.model.fit(
+            x=self.X, 
+            y=self.Y,
+            batch_size=self.args.batchsize,
+            epochs=self.args.epochs,
+            callbacks=callbacks,
+            validation_data=self.val_data,
+            verbose=2,
+        )
+        return H
+
+    def get_pipeline(self):
+        """
+        get forward prediction pipeline
+        """
+        return (self.encoder, self.dynamics, self.decoder)
+
+    def save_eigenvals(self):
+        output_eigvals(self.dynamics.weights[0], self.make_run_name())
