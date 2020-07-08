@@ -26,6 +26,7 @@ print("Keras version:", keras.__version__) # 2.4.3
 parser = argparse.ArgumentParser()
 
 parser.add_argument("--pred-steps",type=int,default=50,help="number of timesteps to predict")
+parser.add_argument("--file",default=None,help="file with weights paths to compare. Each line should be: '<name><tab-character><weights path>'")
 
 args = parser.parse_args()
 
@@ -93,7 +94,7 @@ def run_one_test(model_path, data, num_steps):
             mse = np.mean((true - pred) ** 2)
             step_mse.append(mse)
 
-            if step % 10 == 0 and i == 7:
+            if (step % 10 == 0 or step in (1,3,5)) and i == 7:
                 write_im(pred, title=str(step) + " steps prediction", 
                     filename="pred_step" + str(step), directory="test_results/"+dirname )
                 write_im(true, title=str(step) + " steps ground truth", 
@@ -107,25 +108,32 @@ def run_one_test(model_path, data, num_steps):
     return error
 
 
-num_compare = int(input("How many models to compare?: ").strip())
+if args.file is not None:
+    # File mode
+    with open(args.file, "r") as f:
+        lines = f.readlines()
+    lines = [i.split("\t",maxsplit=1) for i in lines]
+    names = [i[0].strip() for i in lines]
+    paths = [i[1].strip() for i in lines]
+    
+else:
+    # User interface mode
 
-root = tk.Tk()
-root.withdraw()
+    num_compare = int(input("How many models to compare?: ").strip())
+    paths = []
+    names = []
 
-paths = []
-names = []
-
-for _ in range(num_compare):
-
-    print("Select model file to compare to...")
-    model_path = filedialog.askopenfilename(initialdir="models/", title="select .hdf5 model file")
-
-    if model_path == "":
-        continue
-    print(model_path)
-    name = re.sub(r"\s", "_", input("Name for this model: "))
-    paths.append(model_path)
-    names.append(name)
+    root = tk.Tk()
+    root.withdraw()
+    for _ in range(num_compare):
+        print("Select model file to compare to...")
+        model_path = filedialog.askopenfilename(initialdir="models/", title="select .hdf5 model file")
+        if model_path == "":
+            continue
+        print(model_path)
+        name = re.sub(r"\s", "_", input("Name for this model: "))
+        paths.append(model_path)
+        names.append(name)
 
 results = []
 
