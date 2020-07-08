@@ -14,7 +14,6 @@ from keras.layers import (Activation, Add, BatchNormalization, Concatenate,
                           Softmax, Subtract, UpSampling2D, ZeroPadding2D, add)
 from keras.models import Model
 
-from src.common import *
 from src.regularizers import *
 
 
@@ -29,8 +28,11 @@ class FullyConnectedBlock(Layer):
     Dense layer with optional TanH activation and/or Batchnorm
     """
 
-    def __init__(self, name, output_dims, weight_decay, activate=True, batchnorm=False):
-        super().__init__()
+    def __init__(self, name, output_dims, weight_decay, activate=True, 
+            batchnorm=False, *args, **kwargs):
+        super().__init__(name=name, *args, **kwargs)
+        self.output_dims = output_dims
+        self.weight_decay = weight_decay
 
         self.dense = Dense(output_dims,
             kernel_initializer=glorot_normal(), # aka Xavier Normal
@@ -52,6 +54,16 @@ class FullyConnectedBlock(Layer):
         if self.batchnorm is not None:
             x = self.batchnorm(x)
         return x
+    
+    def get_config(self):
+        config = super().get_config()
+        config.update({
+            "output_dims": self.output_dims,
+            "weight_decay": self.weight_decay,
+            "activate": self.activation is not None,
+            "batchnorm": self.batchnorm is not None,
+        })
+        return config
 
 
 class AutoencoderBlock(Layer):
@@ -59,8 +71,13 @@ class AutoencoderBlock(Layer):
     block of 3 fully connected layers, either for encoder or decoder
     """
 
-    def __init__(self, sizes, weight_decay, name, activate_last=False, batchnorm_last=False):
-        super().__init__()
+    def __init__(self, sizes, weight_decay, name, activate_last=False, 
+            batchnorm_last=False, *args, **kwargs):
+        super().__init__(name=name, *args, **kwargs)
+        self.sizes = sizes
+        self.weight_decay = weight_decay
+        self.activate_last = activate_last
+        self.batchnorm_last = batchnorm_last
 
         self.block1 = FullyConnectedBlock(name+"1", sizes[0], weight_decay)
         self.block2 = FullyConnectedBlock(name+"2", sizes[1], weight_decay)
@@ -73,6 +90,15 @@ class AutoencoderBlock(Layer):
         x = self.block3(x)
         return x
 
+    def get_config(self):
+        config = super().get_config()
+        config.update({
+            "sizes": self.sizes,
+            "weight_decay": self.weight_decay,
+            "activate_last": self.activate_last,
+            "batchnorm_last": self.batchnorm_last,
+        })
+        return config
 
 
 class BaseAE(abc.ABC):
@@ -96,6 +122,10 @@ class BaseAE(abc.ABC):
         ...
 
     @abc.abstractmethod
+    def compile_model(self, optimizer):
+        ...
+
+    @abc.abstractmethod
     def train(self, callbacks):
         """
         call model.fit, return History
@@ -112,3 +142,10 @@ class BaseAE(abc.ABC):
     @abc.abstractmethod
     def save_eigenvals(self):
         ...
+
+
+CUSTOM_OBJ_DICT = {
+    "AutoencoderBlock": AutoencoderBlock,
+    "FullyConnectedBlock": FullyConnectedBlock,
+}
+

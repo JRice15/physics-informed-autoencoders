@@ -1,5 +1,9 @@
 import re
 import time
+import argparse
+import os
+import shutil
+import json
 
 import keras
 import keras.backend as K
@@ -12,7 +16,6 @@ from keras import metrics
 from keras.models import Model
 from keras.optimizers import Adam
 
-from src.common import *
 from src.lyapunov_autoencoder import *
 from src.koopman_autoencoder import *
 from src.output_results import *
@@ -24,7 +27,7 @@ print("Keras version:", keras.__version__) # 2.4.3
 def make_dirs(run_name):
     dirname = run_name.strip(".")
     os.makedirs("data", exist_ok=True)
-    os.makedirs("weights", exist_ok=True)
+    os.makedirs("models", exist_ok=True)
     os.makedirs("train_results/" + dirname, exist_ok=True)
     os.makedirs("stats/" + dirname, exist_ok=True)
     if os.path.exists("logs"):
@@ -102,15 +105,10 @@ elif args.load:
 X, Xtest, imshape = data_from_name(args.dataset)
 datashape = X[0].shape
 
-optimizer = Adam(
-    learning_rate=args.lr, 
-    # clipvalue=5.0,
-)
-
 if model_type == "lyapunov":
-    autoencoder = LyapunovAutoencoder(args, datashape, optimizer)
+    autoencoder = LyapunovAutoencoder(args, datashape)
 elif model_type == "koopman":
-    autoencoder = KoopmanAutoencoder(args, datashape, optimizer)
+    autoencoder = KoopmanAutoencoder(args, datashape)
 
 autoencoder.format_data(X, Xtest)
 
@@ -129,17 +127,24 @@ def lr_schedule(args):
         return new_rate
     return scheduler
 
-weights_path = "weights/weights." + run_name + "hdf5"
+model_path = "models/model." + run_name + "hdf5"
 
 callbacks = [
     LearningRateScheduler(lr_schedule(args)),
-    ModelCheckpoint(weights_path, save_best_only=True, save_weights_only=True, 
+    ModelCheckpoint(model_path, save_best_only=True, save_weights_only=False, 
         verbose=1, period=20),
     TensorBoard(histogram_freq=100, write_graph=False, write_images=True, 
         update_freq=(args.batchsize * 20), embeddings_freq=100),
     ImgWriter(pipeline=autoencoder.get_pipeline(), run_name=run_name, 
         Xtest=Xtest[:-1], Ytest=Xtest[1:], freq=args.epochs//6, imshape=imshape),
 ]
+
+optimizer = Adam(
+    learning_rate=args.lr, 
+    # clipvalue=5.0,
+)
+
+autoencoder.compile_model(optimizer)
 
 print("\n\n\nBegin Training")
 

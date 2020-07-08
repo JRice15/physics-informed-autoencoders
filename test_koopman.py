@@ -14,7 +14,6 @@ import tensorflow as tf
 from keras import Input
 from keras.models import Model
 
-from src.common import *
 from src.koopman_autoencoder import *
 from src.output_results import *
 from src.read_dataset import *

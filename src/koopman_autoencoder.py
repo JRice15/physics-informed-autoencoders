@@ -14,10 +14,8 @@ from keras.activations import tanh
 from keras import regularizers
 
 from src.regularizers import *
-from src.common import *
 from src.autoencoders import *
-
-
+from src.output_results import *
 
 
 class InverseDynamicsInitializer():
@@ -35,16 +33,19 @@ class KoopmanConsistencyLayer(Dense):
     enforce consistency of forward-backward predictions
     """
 
-    def __init__(self, pair_layer, cons_wt, units, name, weight_decay, use_bias=False):
+    def __init__(self, pair_layer, cons_wt, units, name, weight_decay, 
+            use_bias=False, *args, **kwargs):
         self.pair_layer = pair_layer
         self.cons_wt = cons_wt
         self.weight_decay = weight_decay
+        kwargs["kernel_initializer"] = InverseDynamicsInitializer(pair_layer)
+        kwargs["kernel_regularizer"] = self.consistency_reg()
+        kwargs["bias_initializer"] = zeros()
         super().__init__(
+            *args, **kwargs,
             units=units, 
             name=name, 
             use_bias=use_bias,
-            kernel_initializer=InverseDynamicsInitializer(pair_layer),
-            kernel_regularizer=self.consistency_reg()
         )
     
     def consistency_reg(self):
@@ -78,6 +79,15 @@ class KoopmanConsistencyLayer(Dense):
         
         return regularizer
         
+    def get_config(self):
+        config = super().get_config()
+        config.update({
+            "pair_layer": self.pair_layer,
+            "cons_wt": self.cons_wt,
+            "weight_decay": self.weight_decay,
+        })
+        return config
+
 
 class KoopmanAutoencoder(BaseAE):
 
@@ -98,7 +108,7 @@ class KoopmanAutoencoder(BaseAE):
         sizes = (2*16, 10) # largest to smallest
 
 
-    def __init__(self, args, datashape, optimizer):
+    def __init__(self, args, datashape):
         super().__init__(args)
         if args.bwd_steps > 0:
             self.has_bwd = True
@@ -116,8 +126,7 @@ class KoopmanAutoencoder(BaseAE):
             sizes=args.sizes,
             weight_decay=args.wd,
         )
-        self.model.compile(optimizer=optimizer, loss=None)
-
+    
     def build_model(self, snapshot_shape, output_dims, fwd_wt, bwd_wt, id_wt, 
             cons_wt, forward_steps, backward_steps, sizes, weight_decay):
         """
@@ -203,6 +212,8 @@ class KoopmanAutoencoder(BaseAE):
         else:
             self.backward = None
 
+    def compile_model(self, optimizer):
+        self.model.compile(optimizer=optimizer, loss=None)
 
     def make_run_name(self):
         args = self.args
@@ -251,4 +262,8 @@ class KoopmanAutoencoder(BaseAE):
         if self.has_bwd > 0:
             output_eigvals(self.backward.weights[0], run_name, type_="backward")
 
+
+CUSTOM_OBJ_DICT.update({
+    "KoopmanConsistencyLayer": KoopmanConsistencyLayer
+})
 

@@ -14,7 +14,6 @@ from keras.activations import tanh
 from keras import metrics, losses
 
 from src.regularizers import *
-from src.common import *
 from src.autoencoders import *
 from src.output_results import *
 
@@ -49,13 +48,12 @@ class LyapunovStableDense(Dense):
         self.weight_decay = weight_decay
         self.kappa = kappa
         self.gamma = gamma
+        self.no_stab = no_stab
         if not no_stab:
             kwargs["kernel_regularizer"] = self.lyapunov_stability_reg()
-        super().__init__(*args, 
-            kernel_initializer=glorot_normal(),
-            bias_initializer=zeros(),
-            **kwargs)
-
+        kwargs["kernel_initializer"] = glorot_normal()
+        kwargs["bias_initializer"] = zeros()
+        super().__init__(*args, **kwargs)
 
     def lyapunov_stability_reg(self):
         """
@@ -93,6 +91,15 @@ class LyapunovStableDense(Dense):
         
         return stability_regularizer
 
+    def get_config(self):
+        config = super().get_config()
+        config.update({
+            "kappa": self.kappa,
+            "gamma": self.gamma,
+            "weight_decay": self.weight_decay,
+            "no_stab": self.no_stab,
+        })
+        return config
 
 
 class LyapunovAutoencoder(BaseAE):
@@ -111,7 +118,7 @@ class LyapunovAutoencoder(BaseAE):
         sizes = (40, 25, 15) # largest to smallest
 
 
-    def __init__(self, args, datashape, optimizer):
+    def __init__(self, args, datashape):
         super().__init__(args)
         self.build_model(
             snapshot_shape=datashape,
@@ -123,9 +130,6 @@ class LyapunovAutoencoder(BaseAE):
             sizes=args.sizes,
             weight_decay=args.wd,
         )
-        self.model.compile(optimizer=optimizer, loss=losses.mse, 
-            metrics=[metrics.MeanSquaredError()])
-
 
     def build_model(self, snapshot_shape, output_dims, lambda_, kappa, gamma,
             no_stability, sizes, weight_decay):
@@ -167,6 +171,10 @@ class LyapunovAutoencoder(BaseAE):
         self.dynamics = dynamics
         self.decoder = decoder
     
+    def compile_model(self, optimizer):
+        self.model.compile(optimizer=optimizer, loss=losses.mse, 
+            metrics=[metrics.MeanSquaredError()])
+
     def make_run_name(self):
         args = self.args
         run_name = args.name + ".lyapunov."
@@ -207,3 +215,8 @@ class LyapunovAutoencoder(BaseAE):
 
     def save_eigenvals(self):
         output_eigvals(self.dynamics.weights[0], self.make_run_name())
+
+
+CUSTOM_OBJ_DICT.update({
+    "LyapunovStableDense": LyapunovStableDense
+})
