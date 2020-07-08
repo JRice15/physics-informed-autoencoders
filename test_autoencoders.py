@@ -3,7 +3,8 @@ import json
 import os
 import re
 import shutil
-
+import tkinter as tk
+from tkinter import filedialog
 
 import keras
 import keras.backend as K
@@ -18,7 +19,6 @@ from src.lyapunov_autoencoder import *
 from src.koopman_autoencoder import *
 from src.output_results import *
 from src.read_dataset import *
-from src.testing import *
 
 print("Tensorflow version:", tf.__version__) # 2.2.0
 print("Keras version:", keras.__version__) # 2.4.3
@@ -29,7 +29,6 @@ parser.add_argument("--pred-steps",type=int,default=50,help="number of timesteps
 parser.add_argument("--file",default=None,help="file with weights paths to compare. Each line should be: '<name><tab-character><weights path>'")
 
 args = parser.parse_args()
-
 
 def get_pipeline(model):
     """
@@ -97,8 +96,10 @@ def run_one_test(model_path, data, num_steps):
             if (step % 10 == 0 or step in (1,3,5)) and i == 7:
                 write_im(pred, title=str(step) + " steps prediction", 
                     filename="pred_step" + str(step), directory="test_results/"+dirname )
-                write_im(true, title=str(step) + " steps ground truth", 
-                    filename="truth_step" + str(step), directory="test_results")
+                if not os.path.exists("test_results/truth/truth_step" + str(step) + ".png"):
+                    os.makedirs("test_results/truth",exist_ok=True)
+                    write_im(true, title=str(step) + " steps ground truth", 
+                        filename="truth_step" + str(step), directory="test_results/truth")
         
         mean_mse = np.mean(step_mse)
         print(step, "steps MSE:", mean_mse)

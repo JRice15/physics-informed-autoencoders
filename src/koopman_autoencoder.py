@@ -111,7 +111,7 @@ class KoopmanAutoencoder(BaseAE):
         namespace for defining arg defaults
         """
         lr = 0.01
-        wd = 0
+        wd = 5e-4
         epochs = 2000
         batchsize = 34
         fwd_steps = 8
