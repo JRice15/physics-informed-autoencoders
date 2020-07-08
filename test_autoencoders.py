@@ -14,6 +14,7 @@ import tensorflow as tf
 from keras import Input
 from keras.models import Model
 
+from src.common import *
 from src.autoencoders import *
 from src.lyapunov_autoencoder import *
 from src.koopman_autoencoder import *
@@ -27,8 +28,11 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument("--pred-steps",type=int,default=50,help="number of timesteps to predict")
 parser.add_argument("--file",default=None,help="file with weights paths to compare. Each line should be: '<name><tab-character><weights path>'")
+parser.add_argument("--seed",type=int,default=0)
 
 args = parser.parse_args()
+
+set_seed(args.seed)
 
 def get_pipeline(model):
     """

@@ -13,7 +13,7 @@ from keras.models import Model
 from keras.activations import tanh
 from keras import regularizers
 
-from src.regularizers import *
+from src.common import *
 from src.autoencoders import *
 from src.output_results import *
 
@@ -112,6 +112,7 @@ class KoopmanAutoencoder(BaseAE):
         """
         lr = 0.01
         wd = 5e-4
+        gradclip=0.05
         epochs = 2000
         batchsize = 34
         fwd_steps = 8

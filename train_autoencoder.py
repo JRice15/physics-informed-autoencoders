@@ -16,6 +16,7 @@ from keras import metrics
 from keras.models import Model
 from keras.optimizers import Adam
 
+from src.common import *
 from src.lyapunov_autoencoder import *
 from src.koopman_autoencoder import *
 from src.output_results import *
@@ -59,6 +60,8 @@ parser.add_argument("--name",type=str,required=True,help="name of this training 
 parser.add_argument("--dataset",type=str,default="flow_cylinder",help="name of dataset")
 parser.add_argument("--lr",type=float,default=defaults.lr,help="learning rate")
 parser.add_argument("--wd",type=float,default=defaults.wd,help="weight decay weighting factor")
+parser.add_argument("--gradclip",type=float,default=defaults.gradclip,help="gradient clipping by norm")
+parser.add_argument("--seed",type=int,default=0,help="random seed")
 parser.add_argument("--epochs",type=int,default=defaults.epochs)
 parser.add_argument("--batchsize",type=int,default=defaults.batchsize)
 parser.add_argument("--sizes",type=int,default=defaults.sizes,nargs=num_sizes,help="encoder layer output widths in decreasing order of size")
@@ -101,6 +104,8 @@ elif args.load:
     args.__dict__.update(loaded)
 
 
+set_seed(args.seed)
+
 # Read Data
 X, Xtest, imshape = data_from_name(args.dataset)
 datashape = X[0].shape
@@ -140,8 +145,8 @@ callbacks = [
 ]
 
 optimizer = Adam(
-    learning_rate=args.lr, 
-    # clipvalue=5.0,
+    learning_rate=args.lr,
+    clipnorm=args.gradclip
 )
 
 autoencoder.compile_model(optimizer)

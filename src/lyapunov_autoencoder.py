@@ -13,7 +13,7 @@ from keras.models import Model
 from keras.activations import tanh
 from keras import metrics, losses
 
-from src.regularizers import *
+from src.common import *
 from src.autoencoders import *
 from src.output_results import *
 
@@ -110,6 +110,7 @@ class LyapunovAutoencoder(BaseAE):
         """
         lr = 0.01
         wd = 1e-6
+        gradclip = None
         epochs = 6000
         batchsize = 34
         lambda_ = 3 # inverse regularizer weight

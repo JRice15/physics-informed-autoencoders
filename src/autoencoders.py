@@ -14,7 +14,7 @@ from keras.layers import (Activation, Add, BatchNormalization, Concatenate,
                           Softmax, Subtract, UpSampling2D, ZeroPadding2D, add)
 from keras.models import Model
 
-from src.regularizers import *
+from src.common import *
 
 
 """

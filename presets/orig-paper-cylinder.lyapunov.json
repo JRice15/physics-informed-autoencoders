@@ -3,6 +3,7 @@
   "dataset": "flow_cylinder",
   "lr": 0.01,
   "wd": 0.000001,
+  "gradclip": null,
   "epochs": 6000,
   "batchsize": 34,
   "sizes": [

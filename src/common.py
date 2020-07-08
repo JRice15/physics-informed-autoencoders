@@ -10,6 +10,11 @@ from keras import Input
 from keras.layers import Layer, Dense
 
 
+def set_seed(seed):
+    np.random.seed(seed)
+    tf.random.set_seed(seed)
+
+
 def inverse_reg(x, encoder, decoder):
     """
     regularizer to enforce that the decoder is the inverse of the encoder. 
