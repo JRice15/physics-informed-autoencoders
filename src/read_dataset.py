@@ -1,14 +1,17 @@
 import numpy as np
 from scipy.io import loadmat
+import re
 
 """
 from github.com/erichson/ShallowDecoder.git
 """
 
 def data_from_name(name):
-    if name in ("cylinder", "flow-cylinder", "flow_cylinder"):
+    # get rid of dashes and underscores to match easier
+    name = re.sub(r"[-_]", "", name)
+    if name in ("cylinder", "flowcylinder"):
         return flow_cylinder()
-    if name in ("cylinder-full", "flow-cylinder-full"):
+    if name in ("cylinderfull", "flowcylinderfull"):
         return flow_cylinder(full=True)
     if name == "sst":
         return sst()

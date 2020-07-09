@@ -104,21 +104,6 @@ class LyapunovStableDense(Dense):
 
 class LyapunovAutoencoder(BaseAE):
 
-    class Defaults:
-        """
-        namespace for defining arg defaults
-        """
-        lr = 0.01
-        wd = 1e-6
-        gradclip = 0
-        epochs = 6000
-        batchsize = 34
-        lambda_ = 3 # inverse regularizer weight
-        kappa = 3 # stability regularizer weight
-        gamma = 4 # stability regularizer steepness
-        sizes = (40, 25, 15) # largest to smallest
-
-
     def __init__(self, args, datashape):
         super().__init__(args)
         self.build_model(

@@ -106,24 +106,6 @@ class KoopmanConsistencyLayer(Dense):
 
 class KoopmanAutoencoder(BaseAE):
 
-    class Defaults:
-        """
-        namespace for defining arg defaults
-        """
-        lr = 0.01
-        wd = 5e-4
-        gradclip=0.5
-        epochs = 2000
-        batchsize = 34
-        fwd_steps = 8
-        bwd_steps = 8
-        forward = 1
-        backward = 0.1
-        identity = 1
-        consistency = 0.01
-        sizes = (2*16, 10) # largest to smallest
-
-
     def __init__(self, args, datashape):
         super().__init__(args)
         if args.bwd_steps > 0:

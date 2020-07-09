@@ -43,11 +43,14 @@ args, unknown = parser.parse_known_args()
 
 model_type = args.model
 if model_type == "lyapunov":
-    defaults = LyapunovAutoencoder.Defaults
+    defaults_file = "presets/orig-paper-cylinder.lyapunov.json"
     num_sizes = 3
 elif model_type == "koopman":
-    defaults = KoopmanAutoencoder.Defaults
+    defaults_file = "presets/orig-paper-cylinder.koopman.json"
     num_sizes = 2
+
+with open(defaults_file, "r") as f:
+    defaults = json.load(f)
 
 # Parse Full Args
 parser = argparse.ArgumentParser(description="see Erichson et al's 'PHYSICS-INFORMED "
@@ -57,26 +60,26 @@ parser = argparse.ArgumentParser(description="see Erichson et al's 'PHYSICS-INFO
 parser.add_argument("--model",required=True,choices=["koopman","lyapunov"],help="name of the model to use")
 parser.add_argument("--name",type=str,required=True,help="name of this training run")
 parser.add_argument("--dataset",type=str,default="flow_cylinder",help="name of dataset")
-parser.add_argument("--lr",type=float,default=defaults.lr,help="learning rate")
-parser.add_argument("--wd",type=float,default=defaults.wd,help="weight decay weighting factor")
-parser.add_argument("--gradclip",type=float,default=defaults.gradclip,help="gradient clipping by norm, or 0 for no gradclipping")
+parser.add_argument("--lr",type=float,default=defaults["lr"],help="learning rate")
+parser.add_argument("--wd",type=float,default=defaults["wd"],help="weight decay weighting factor")
+parser.add_argument("--gradclip",type=float,default=defaults["gradclip"],help="gradient clipping by norm, or 0 for no gradclipping")
 parser.add_argument("--seed",type=int,default=0,help="random seed")
-parser.add_argument("--epochs",type=int,default=defaults.epochs)
-parser.add_argument("--batchsize",type=int,default=defaults.batchsize)
-parser.add_argument("--sizes",type=int,default=defaults.sizes,nargs=num_sizes,help="encoder layer output widths in decreasing order of size")
+parser.add_argument("--epochs",type=int,default=defaults["epochs"])
+parser.add_argument("--batchsize",type=int,default=defaults["batchsize"])
+parser.add_argument("--sizes",type=int,default=defaults["sizes"],nargs=num_sizes,help="encoder layer output widths in decreasing order of size")
 
 if model_type == "lyapunov":
-    parser.add_argument("--lambd",type=float,default=defaults.lambda_,help="inverse regularizer weight")
-    parser.add_argument("--kappa",type=float,default=defaults.kappa,help="stability regularizer weight")
-    parser.add_argument("--gamma",type=float,default=defaults.gamma,help="stability regularizer steepness")
+    parser.add_argument("--lambd",type=float,default=defaults["lambd"],help="inverse regularizer weight")
+    parser.add_argument("--kappa",type=float,default=defaults["kappa"],help="stability regularizer weight")
+    parser.add_argument("--gamma",type=float,default=defaults["gamma"],help="stability regularizer steepness")
     parser.add_argument("--no-stability",action="store_true",default=False,help="use this flag for no stability regularization")
 elif model_type == "koopman":
-    parser.add_argument("--identity",type=float,default=defaults.consistency,help="weight for decoder(encoder)==identity regularizer term")
-    parser.add_argument("--forward",type=float,default=defaults.forward,help="weight for forward dynamics regularizer term")
-    parser.add_argument("--backward",type=float,default=defaults.backward,help="weight for backward dynamics regularizer term")
-    parser.add_argument("--consistency",type=float,default=defaults.consistency,help="weight for consistency regularizer term")
-    parser.add_argument("--fwd-steps",type=int,default=defaults.fwd_steps,help="number of forward prediction steps to use in the loss")
-    parser.add_argument("--bwd-steps",type=int,default=defaults.bwd_steps,help="number of backward prediction steps to use in the loss")
+    parser.add_argument("--identity",type=float,default=defaults["identity"],help="weight for decoder(encoder)==identity regularizer term")
+    parser.add_argument("--forward",type=float,default=defaults["forward"],help="weight for forward dynamics regularizer term")
+    parser.add_argument("--backward",type=float,default=defaults["backward"],help="weight for backward dynamics regularizer term")
+    parser.add_argument("--consistency",type=float,default=defaults["consistency"],help="weight for consistency regularizer term")
+    parser.add_argument("--fwd-steps",type=int,default=defaults["fwd_steps"],help="number of forward prediction steps to use in the loss")
+    parser.add_argument("--bwd-steps",type=int,default=defaults["bwd_steps"],help="number of backward prediction steps to use in the loss")
 
 parser.add_argument("--save",action="store_true",default=False,help="save these hyperparameters to a file, 'presets/<name>.<model>.json'")
 parser.add_argument("--load",action="store_true",default=False,help="load hyperparameters from a file in the 'presets/'")
