@@ -140,7 +140,7 @@ callbacks = [
     TensorBoard(histogram_freq=100, write_graph=False, write_images=True, 
         update_freq=(args.batchsize * 20), embeddings_freq=100),
     ImgWriter(pipeline=autoencoder.get_pipeline(), run_name=run_name, 
-        Xtest=Xtest[:-1], Ytest=Xtest[1:], freq=5, data_formatter=data_formatter),
+        Xtest=Xtest[:-1], Ytest=Xtest[1:], freq=args.epochs//5, data_formatter=data_formatter),
 ]
 
 gradclip = None if args.gradclip == 0 else args.gradclip
