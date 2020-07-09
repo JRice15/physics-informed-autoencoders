@@ -27,6 +27,7 @@ print("Keras version:", keras.__version__) # 2.4.3
 
 parser = argparse.ArgumentParser()
 
+parser.add_argument("--dataset",default="flow_cylinder",help="name of the dataset to use")
 parser.add_argument("--pred-steps",type=int,default=50,help="number of timesteps to predict")
 parser.add_argument("--file",default=None,help="file with weights paths to compare. Each line should be: '<name><tab-character><weights path>'")
 parser.add_argument("--seed",type=int,default=0)
@@ -55,7 +56,7 @@ def get_pipeline(model):
 
 
 # Read Data
-X, Xtest, data_formatter, imshape = data_from_name("flow_cylinder")
+X, Xtest, data_formatter, imshape = data_from_name(args.dataset)
 datashape = X[0].shape
 data = np.concatenate([X, Xtest], axis=0)
 
@@ -146,7 +147,8 @@ else:
     root = tk.Tk()
     root.withdraw()
 
-    print("Select model files to compare, and cancel when complete...")
+    print("Select model files to compare, and cancel when complete")
+    print("Make sure the model you select is for the dataset '{}', otherwise there will likely be an error".format(args.dataset))
     time.sleep(0.5)
     while True:
         model_path = filedialog.askopenfilename(initialdir="models/", title="select a .hdf5 model file, or cancel to be done")
