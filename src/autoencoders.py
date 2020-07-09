@@ -113,7 +113,7 @@ class BaseAE(abc.ABC):
         args = self.args
         run_name = args.dataset + "."
         run_name += "{}ep_{}bs_{}lr_{}wd_{}gc.".format(args.epochs, args.batchsize, args.lr, args.wd, args.gradclip)
-        run_name += "s" + "_".join(args.sizes)
+        run_name += "s" + "_".join([str(i) for i in args.sizes])
         run_name += ".{}".format(args.seed)
         return run_name
 
