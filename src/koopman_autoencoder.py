@@ -234,11 +234,10 @@ class KoopmanAutoencoder(BaseAE):
 
     def make_run_name(self):
         args = self.args
-        run_name = args.name + ".koop.{}_".format(args.seed)
+        run_name = args.name + ".koop."
         run_name += "{}f_{}b_steps.".format(args.fwd_steps, args.bwd_steps)
         run_name += "f{}_b{}_i{}_c{}.".format(args.forward, args.backward, args.identity, args.consistency)
-        run_name += "{}ep_{}bs_{}lr_{}wd.".format(args.epochs, args.batchsize, args.lr, args.wd)
-        run_name += "s{}_{}.".format(*args.sizes)
+        run_name += self.run_name_common_suffix()
         return run_name
 
     def data_formatter(self, X, bwd_steps, fwd_steps):

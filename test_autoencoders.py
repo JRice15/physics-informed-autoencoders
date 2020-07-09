@@ -73,7 +73,7 @@ def run_one_test(model_path, data, num_steps):
     autoencoder = keras.models.load_model(model_path, custom_objects=CUSTOM_OBJ_DICT)
     encoder, dynamics, decoder = get_pipeline(autoencoder)
 
-    dirname = run_name_from_model_path(model_path).strip(".")
+    dirname = run_name_from_model_path(model_path)
     os.makedirs("test_results/" + dirname, exist_ok=True)
 
     num_snapshots = data.shape[0]

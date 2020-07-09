@@ -25,8 +25,7 @@ from src.read_dataset import *
 print("Tensorflow version:", tf.__version__) # 2.2.0
 print("Keras version:", keras.__version__) # 2.4.3
 
-def make_dirs(run_name):
-    dirname = run_name.strip(".")
+def make_dirs(dirname):
     os.makedirs("data", exist_ok=True)
     os.makedirs("models", exist_ok=True)
     os.makedirs("train_results/" + dirname, exist_ok=True)
@@ -132,7 +131,7 @@ def lr_schedule(args):
         return new_rate
     return scheduler
 
-model_path = "models/model." + run_name + "hdf5"
+model_path = "models/model." + run_name + ".hdf5"
 
 callbacks = [
     LearningRateScheduler(lr_schedule(args)),

@@ -6,17 +6,14 @@ from github.com/erichson/ShallowDecoder.git
 """
 
 def data_from_name(name):
-    dataset_map = {
-        "flow_cylinder": flow_cylinder,
-        "sst": sst,
-    }
-    try:
-        dataset_func = dataset_map[name]
-    except KeyError:
-        raise ValueError('dataset {} not recognized, choose one of: {}'.format(
-            name, list(dataset_map.keys())))
-
-    return dataset_func()
+    if name in ("cylinder", "flow-cylinder", "flow_cylinder"):
+        return flow_cylinder()
+    if name in ("cylinder-full", "flow-cylinder-full"):
+        return flow_cylinder(full=True)
+    if name == "sst":
+        return sst()
+    
+    raise ValueError("Unknown dataset " + name)
 
 
 def rescale(Xsmall, Xsmall_test):
@@ -33,11 +30,12 @@ def rescale(Xsmall, Xsmall_test):
 
 
 
-def flow_cylinder():
+def flow_cylinder(full=False):
     X = np.load('data/flow_cylinder.npy')
     
     # remove leading edge and halve horizontal resolution
-    X = X[:,65::2,:]
+    if not full:
+        X = X[:,65::2,:]
 
     # Split into train and test set
     Xsmall = X[0:100, :, :]
@@ -52,7 +50,8 @@ def flow_cylinder():
 
     def formatter(x):
         x = x.reshape((m,n))
-        x = np.repeat(x,2,axis=0)
+        if not full:
+            x = np.repeat(x,2,axis=0)
         x = np.rot90(x)
         return x
 

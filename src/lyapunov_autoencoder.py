@@ -178,14 +178,13 @@ class LyapunovAutoencoder(BaseAE):
 
     def make_run_name(self):
         args = self.args
-        run_name = args.name + ".lyapunov.{}_".format(args.seed)
+        run_name = args.name + ".lyap."
         if args.no_stability:
             run_name += "nostabl."
         else:
             run_name += "stabl."
         run_name += "l{}_k{}_g{}.".format(args.lambd, args.kappa, args.gamma)
-        run_name += "{}ep_{}bs_{}lr_{}wd_{}gc.".format(args.epochs, args.batchsize, args.lr, args.wd, args.gradclip)
-        run_name += "s{}_{}_{}.".format(*args.sizes)
+        run_name += self.run_name_common_suffix()
         return run_name
 
     def format_data(self, X, Xtest):
