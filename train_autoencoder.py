@@ -107,7 +107,7 @@ elif args.load:
 set_seed(args.seed)
 
 # Read Data
-X, Xtest, imshape = data_from_name(args.dataset)
+X, Xtest, data_formatter = data_from_name(args.dataset)
 datashape = X[0].shape
 
 if model_type == "lyapunov":
@@ -141,7 +141,7 @@ callbacks = [
     TensorBoard(histogram_freq=100, write_graph=False, write_images=True, 
         update_freq=(args.batchsize * 20), embeddings_freq=100),
     ImgWriter(pipeline=autoencoder.get_pipeline(), run_name=run_name, 
-        Xtest=Xtest[:-1], Ytest=Xtest[1:], freq=args.epochs//5, imshape=imshape),
+        Xtest=Xtest[:-1], Ytest=Xtest[1:], freq=5, data_formatter=data_formatter),
 ]
 
 gradclip = None if args.gradclip == 0 else args.gradclip

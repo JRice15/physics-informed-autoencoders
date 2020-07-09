@@ -21,59 +21,71 @@ class ImgWriter(Callback):
         epochs: total epochs
     """
 
-    def __init__(self, pipeline, run_name, Xtest, Ytest, imshape, freq=1000):
+    def __init__(self, pipeline, run_name, Xtest, Ytest, data_formatter, freq=1000):
         super().__init__()
         encoder, dynamics, decoder = pipeline
         self.encoder = encoder
         self.dynamics = dynamics
         self.decoder = decoder
         self.freq = freq
-        self.imshape = imshape
+        self.data_formatter = data_formatter
         self.dir = "train_results/" + run_name.strip(".")
         self.run_name = run_name.strip(".")
         self.X = tf.reshape(Xtest[7], (1, -1))
-        write_im(Ytest[7], "Target Y(t+1)", "target_outlined", "train_results", outline=True)
-        write_im(Ytest[7], "Target Y(t+1)", "target", "train_results")
-        write_im(Ytest[6], "Input Y(t)", "input_outlined", "train_results", outline=True)
-        write_im(Ytest[6], "Input Y(t)", "input", "train_results")
+        self.write_truths(Ytest)
+    
+    def write_truths(self, Ytest):
+        targ = self.data_formatter(Ytest[7])
+        inpt = self.data_formatter(Ytest[6])
+        # write_im(targ, "Target Y(t+1)", "target_outlined", "train_results", outline=True)
+        write_im(targ, "Target Y(t+1)", "target", "train_results")
+        # write_im(inpt, "Input Y(t)", "input_outlined", "train_results", outline=True)
+        write_im(inpt, "Input Y(t)", "input", "train_results")
 
     def on_epoch_end(self, epoch, logs=None):
         if (epoch + 1) % self.freq == 0:
             print("Saving result image...")
             result = self.decoder(self.dynamics(self.encoder(self.X)))
+            result = self.data_formatter(K.eval(result))
             write_im(
-                im=K.eval(result),
-                title="Epoch {} Prediction".format(epoch+1) + "\n" + self.run_name,
+                img=result,
+                title="Epoch {} Prediction".format(epoch+1),
+                subtitle=self.run_name,
                 filename="pred_epoch_{}.".format(epoch+1),
-                directory=self.dir
+                directory=self.dir,
             )
 
 
-def write_im(im, title, filename, directory, show=False, outline=False):
+def write_im(img, title, filename, directory, subtitle="", show=False, outline=False):
     """
     if show=True, filename and directory can be None
     """
-    img = im.reshape((384, 199))
+    shape = img.shape
+    img = np.rot90(img.T, k=1)
 
-    x2 = np.arange(0, 384, 1)
-    y2 = np.arange(0, 199, 1)
+    x2 = np.arange(0, shape[0], 1)
+    y2 = np.arange(0, shape[1], 1)
     mX, mY = np.meshgrid(x2, y2)
 
     minmax = np.max(np.abs(img)) * 0.65
 
     plt.figure(facecolor="white",  edgecolor='k', figsize=(7.9,4.7))
     # light contour (looks blurry otherwise)
-    plt.contourf(mX, mY, img.T, 80, cmap=cmocean.cm.balance, alpha=1, vmin=-minmax, vmax=minmax)
+    plt.contourf(mY.T, mX.T, img, 80, cmap=cmocean.cm.balance, alpha=1, vmin=-minmax, vmax=minmax)
     # heavy contour
     if outline:
-        plt.contour(mX, mY, img.T, 80, colors='black', alpha=0.5, vmin=-minmax, vmax=minmax)
-    im = plt.imshow(img.T, cmap=cmocean.cm.balance, interpolation='none', vmin=-minmax, vmax=minmax)
+        plt.contour(mY.T, mX.T, img, 40, colors='black', alpha=0.5, vmin=-minmax, vmax=minmax)
+    im = plt.imshow(img, cmap=cmocean.cm.balance, interpolation='none', vmin=-minmax, vmax=minmax)
 
-    wedge = mpatches.Wedge((0,99), 33, 270, 90, ec="#636363", color='#636363',lw = 5, zorder=200)
-    im.axes.add_patch(p=wedge)
+    # wedge = mpatches.Wedge((0,99), 33, 270, 90, ec="#636363", color='#636363',lw = 5, zorder=200)
+    # im.axes.add_patch(p=wedge)
 
     plt.tight_layout()
-    plt.axis('off')
+    # plt.axis('off')
+    plt.xticks([])
+    plt.yticks([])
+    plt.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1)
+    plt.xlabel(subtitle)
 
     plt.title(title.title())
 

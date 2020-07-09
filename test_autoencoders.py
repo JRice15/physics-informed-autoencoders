@@ -4,6 +4,7 @@ import os
 import re
 import shutil
 import tkinter as tk
+import time
 from tkinter import filedialog
 
 import keras
@@ -123,22 +124,23 @@ if args.file is not None:
     
 else:
     # User interface mode
-
-    num_compare = int(input("How many models to compare?: ").strip())
     paths = []
     names = []
 
     root = tk.Tk()
     root.withdraw()
-    for _ in range(num_compare):
-        print("Select model file to compare to...")
-        model_path = filedialog.askopenfilename(initialdir="models/", title="select .hdf5 model file")
+
+    print("Select model files to compare, and cancel when complete...")
+    time.sleep(0.5)
+    while True:
+        model_path = filedialog.askopenfilename(initialdir="models/", title="select a .hdf5 model file, or cancel to be done")
         if model_path == "":
-            continue
+            break
         print(model_path)
         name = re.sub(r"\s", "_", input("Name for this model: "))
         paths.append(model_path)
         names.append(name)
+
 
 results = []
 

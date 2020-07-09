@@ -36,6 +36,9 @@ def rescale(Xsmall, Xsmall_test):
 def flow_cylinder():
     X = np.load('data/flow_cylinder.npy')
     
+    # remove leading edge and halve horizontal resolution
+    X = X[:,65::2,:]
+
     # Split into train and test set
     Xsmall = X[0:100, :, :]
     t, m, n = Xsmall.shape
@@ -46,7 +49,14 @@ def flow_cylinder():
 
     print("Flow cylinder X shape:", Xsmall.shape, "Xtest shape:", Xsmall_test.shape)
     # Xsmall, Xsmall_test = rescale(Xsmall, Xsmall_test)
-    return Xsmall, Xsmall_test, (m, n)
+
+    def formatter(x):
+        x = x.reshape((m,n))
+        x = np.repeat(x,2,axis=0)
+        x = np.rot90(x)
+        return x
+
+    return Xsmall, Xsmall_test, formatter
 
 
 
@@ -91,5 +101,9 @@ def sst():
     #******************************************************************************
     print("SST X shape:", X_train.shape, "Xtest shape:", X_test.shape)
     # return X_train, X_test, X_train, X_test, m, n
-    return X_train, X_test, (m, n)
+
+    def formatter(x):
+        return x.reshape((m,n))
+
+    return X_train, X_test, formatter
 
