@@ -134,7 +134,8 @@ def save_history(H: History, run_name, marker_step=1000, skip=200):
 
 
 def make_plot(xrange, data, title, axlabels, dnames=None, marker_step=1, 
-        mark=0, legendloc="upper right", skipshift=0):
+        mark=0, legendloc="upper right", skipshift=0, fillbetweens=None, 
+        fillbetween_desc=""):
     """
     Args:
         data: tuple of lists/arrays, each of which is a data line
@@ -154,6 +155,8 @@ def make_plot(xrange, data, title, axlabels, dnames=None, marker_step=1,
                 markersize=5)
         else:
             plt.plot(xrange, data[i])
+        if fillbetweens is not None:
+            plt.fill_between(xrange, fillbetweens[i][0], fillbetweens[i][1], alpha=0.2)
 
     if mark_data is not None:
         points = mark_data[::marker_step]
@@ -176,7 +179,7 @@ def make_plot(xrange, data, title, axlabels, dnames=None, marker_step=1,
 
     plt.title(title)
     plt.xlabel(axlabels[0])
-    plt.ylabel(axlabels[1])
+    plt.ylabel(axlabels[1] + " " + fillbetween_desc)
     # plt.yscale("log")
     if dnames is not None:
         dnames = [i for i in dnames if i is not None]

@@ -55,7 +55,7 @@ def get_pipeline(model):
 
 
 # Read Data
-X, Xtest, imshape = data_from_name("flow_cylinder")
+X, Xtest, data_formatter, imshape = data_from_name("flow_cylinder")
 datashape = X[0].shape
 data = np.concatenate([X, Xtest], axis=0)
 
@@ -80,12 +80,18 @@ def run_one_test(model_path, data, num_steps):
     data = np.reshape(data, (1, num_snapshots, -1))
     tfdata = tf.convert_to_tensor(data)
 
-    error = []
+    mse_min = []
+    mse_max = []
+    mse_avg = []
+    relpred_min = []
+    relpred_max = []
+    relpred_avg = []
 
     print("\n")
     print(model_path)
     for step in range(1, num_steps+1):
         step_mse = []
+        step_relpred_err = []
         for i in range(num_snapshots - num_steps):
             snapshot = tfdata[:,i,:]
 
@@ -93,25 +99,35 @@ def run_one_test(model_path, data, num_steps):
             for _ in range(step):
                 x = dynamics(x)
             pred = decoder(x).numpy()
+            pred = pred.reshape(imshape)
+            true = data[:,i+step,:].reshape(imshape)
 
-            true = data[:,i+step,:]
             mse = np.mean((true - pred) ** 2)
             step_mse.append(mse)
 
+            relpred_err = np.linalg.norm(pred - true) / np.linalg.norm(true)
+            step_relpred_err.append(relpred_err)
+
             if (step % 10 == 0 or step in (1,3,5)) and i == 7:
-                write_im(pred, title=str(step) + " steps prediction", 
+                write_im(data_formatter(pred), title=str(step) + " steps prediction", 
                     filename="pred_step" + str(step), directory="test_results/"+dirname )
                 if not os.path.exists("test_results/truth/truth_step" + str(step) + ".png"):
                     os.makedirs("test_results/truth",exist_ok=True)
-                    write_im(true, title=str(step) + " steps ground truth", 
+                    write_im(data_formatter(true), title=str(step) + " steps ground truth", 
                         filename="truth_step" + str(step), directory="test_results/truth")
         
         mean_mse = np.mean(step_mse)
-        print(step, "steps MSE:", mean_mse)
-        error.append(mean_mse)
-    
-    print("")
-    return error
+        mean_relpred_err = np.mean(step_relpred_err)
+        print(step, "steps MSE:", mean_mse, "relative error:", mean_relpred_err)
+        mse_avg.append(mean_mse)
+        relpred_avg.append(mean_relpred_err)
+
+        mse_min.append(np.percentile(step_mse, 5))
+        mse_max.append(np.percentile(step_mse, 95))
+        relpred_min.append(np.percentile(step_relpred_err, 5))
+        relpred_max.append(np.percentile(step_relpred_err, 95))
+        
+    return mse_min, mse_max, mse_avg, relpred_min, relpred_max, relpred_avg
 
 
 if args.file is not None:
@@ -142,19 +158,41 @@ else:
         names.append(name)
 
 
-results = []
+mse_avgs = []
+mse_errbounds = []
+relpred_avgs = []
+relpred_errbounds = []
 
 for p in paths:
-    error = run_one_test(p, data, args.pred_steps)
-    results.append(error)
+    m_min, m_max, m_avg, r_min, r_max, r_avg = run_one_test(p, data, args.pred_steps)
+    mse_avgs.append(m_avg)
+    mse_errbounds.append( (m_min, m_max) )
+    relpred_avgs.append(r_avg)
+    relpred_errbounds.append( (r_min, r_max) )
 
-xrange = list(range(len(results[0])))
-make_plot(xrange=xrange, data=tuple(results), dnames=names, title="MSE of Multi-Step Predictions", 
+
+xrange = list(range(len(mse_avgs[0])))
+
+# MSE
+make_plot(xrange=xrange, data=tuple(mse_avgs), dnames=names, title="MSE of Multi-Step Predictions", 
     mark=0, axlabels=("steps", "mean squared error"), legendloc="upper left",
-    marker_step=(len(results[0]) // 6))
+    marker_step=(len(mse_avgs[0]) // 6), fillbetweens=mse_errbounds,
+    fillbetween_desc="with 90% confidence interval")
 
 fullname = "_vs_".join(names)
 plt.savefig("test_results/" + fullname + ".multistep_mse.png")
+
+plt.clf()
+
+# Relative Error
+make_plot(xrange=xrange, data=tuple(relpred_avgs), dnames=names, title="Relative Error of Multi-Step Predictions", 
+    mark=0, axlabels=("steps", "relative error"), legendloc="upper left",
+    marker_step=(len(mse_avgs[0]) // 6), fillbetweens=relpred_errbounds,
+    fillbetween_desc="with 90% confidence interval")
+
+fullname = "_vs_".join(names)
+plt.savefig("test_results/" + fullname + ".multistep_relpred_err.png")
+
 
 print("Results have been save to 'test_results/'")
 

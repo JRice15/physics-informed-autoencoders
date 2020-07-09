@@ -106,7 +106,7 @@ elif args.load:
 set_seed(args.seed)
 
 # Read Data
-X, Xtest, data_formatter = data_from_name(args.dataset)
+X, Xtest, data_formatter, imshape = data_from_name(args.dataset)
 datashape = X[0].shape
 
 if model_type == "lyapunov":

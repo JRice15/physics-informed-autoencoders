@@ -55,7 +55,7 @@ def flow_cylinder(full=False):
         x = np.rot90(x)
         return x
 
-    return Xsmall, Xsmall_test, formatter
+    return Xsmall, Xsmall_test, formatter, (m,n)
 
 
 
@@ -104,5 +104,5 @@ def sst():
     def formatter(x):
         return x.reshape((m,n))
 
-    return X_train, X_test, formatter
+    return X_train, X_test, formatter, (m,n)
 
