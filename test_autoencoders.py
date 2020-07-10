@@ -176,13 +176,19 @@ for p in paths:
 xrange = list(range(len(mse_avgs[0])))
 
 fullname = "_vs_".join(names) + "." + get_data_name(args.dataset)
+fb_desc = "with 90% confidence interval"
+
+if len(mse_avgs) > 6:
+    fb_desc = ""
+    mse_errbounds = None
+    relpred_errbounds = None
 
 
 # MSE
 make_plot(xrange=xrange, data=tuple(mse_avgs), dnames=names, title="Prediction MSE -- " + args.dataset, 
     mark=0, axlabels=("steps", "mean squared error"), legendloc="upper left",
     marker_step=(len(mse_avgs[0]) // 6), fillbetweens=mse_errbounds,
-    fillbetween_desc="with 90% confidence interval", ylim=1)
+    fillbetween_desc=fb_desc, ylim=1)
 
 plt.savefig("test_results/" + fullname + ".multistep_mse.png")
 
@@ -192,7 +198,7 @@ plt.clf()
 make_plot(xrange=xrange, data=tuple(relpred_avgs), dnames=names, title="Prediction Relative Error -- " + args.dataset, 
     mark=0, axlabels=("steps", "relative error"), legendloc="upper left",
     marker_step=(len(mse_avgs[0]) // 6), fillbetweens=relpred_errbounds,
-    fillbetween_desc="with 90% confidence interval", ylim=1)
+    fillbetween_desc=fb_desc, ylim=1)
 
 plt.savefig("test_results/" + fullname + ".multistep_relpred_err.png")
 

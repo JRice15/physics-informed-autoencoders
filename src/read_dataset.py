@@ -1,33 +1,70 @@
 import numpy as np
 from scipy.io import loadmat
 import re
+import abc
 
 """
 from github.com/erichson/ShallowDecoder.git
 """
 
-def get_data_name(name):
+class CustomDataset(abc.ABC):
+
+    def __init__(self, name, X, Xtest):
+        self.dataname = name
+        self.X = X
+        self.Xtest = Xtest
+        self.Y = None
+        self.Ytest = None
+
+    def set_Y(self, Y, Ytest):
+        self.Y = Y
+        self.Ytest = Ytest
+
+    @abc.abstractmethod
+    def write_im(self, img, title, filename, directory="train_results", 
+            subtitle="", show=False, outline=False):
+        """
+        write image to dir/filename
+        """
+        ...
+
+
+class FlowCylinder(CustomDataset):
+
+    def __init__(self, full=False):
+        self.full = full
+
+        X = np.load('data/flow_cylinder.npy')
+        # remove leading edge and halve horizontal resolution
+        if not self.full:
+            X = X[:,65::2,:]
+
+        # Split into train and test set
+        Xsmall = X[0:100, :, :]
+        t, m, n = Xsmall.shape
+        
+        Xsmall = Xsmall.reshape(100, -1)
+        Xsmall_test = X[100:151, :, :].reshape(51, -1)
+        print("Flow cylinder X shape:", Xsmall.shape, "Xtest shape:", Xsmall_test.shape)
+
+        super().__init__("cylndr")
+
+    def write_im(self, img, title, filename, directory="train_results", 
+            subtitle="", show=False, outline=False):
+
+
+def data_from_name(name):
     """
     convert multiple forms of dataset names to one canonical short name
     """
     # get rid of dashes and underscores to match easier
     name = re.sub(r"[-_]", "", name)
     if name in ("cylinder", "flowcylinder"):
-        return "cylndr"
+        return FlowCylinder()
     if name in ("cylinderfull", "flowcylinderfull"):
         return "cyl-full"
     if name in ("sst", "seasurfacetemp", "seasurfacetemperature"):
         return "sst"
-    raise ValueError("Unknown dataset " + name)
-
-def data_from_name(name):
-    name = get_data_name(name)
-    if name == "cylndr":
-        return flow_cylinder()
-    if name == "cyl-full":
-        return flow_cylinder(full=True)
-    if name == "sst":
-        return sst()
     raise ValueError("Unknown dataset " + name)
 
 
