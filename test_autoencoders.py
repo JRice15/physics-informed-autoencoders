@@ -175,24 +175,25 @@ for p in paths:
 
 xrange = list(range(len(mse_avgs[0])))
 
+fullname = "_vs_".join(names) + "." + get_data_name(args.dataset)
+
+
 # MSE
-make_plot(xrange=xrange, data=tuple(mse_avgs), dnames=names, title="MSE of Multi-Step Predictions", 
+make_plot(xrange=xrange, data=tuple(mse_avgs), dnames=names, title="Prediction MSE -- " + args.dataset, 
     mark=0, axlabels=("steps", "mean squared error"), legendloc="upper left",
     marker_step=(len(mse_avgs[0]) // 6), fillbetweens=mse_errbounds,
-    fillbetween_desc="with 90% confidence interval")
+    fillbetween_desc="with 90% confidence interval", ylim=1)
 
-fullname = "_vs_".join(names)
 plt.savefig("test_results/" + fullname + ".multistep_mse.png")
 
 plt.clf()
 
 # Relative Error
-make_plot(xrange=xrange, data=tuple(relpred_avgs), dnames=names, title="Relative Error of Multi-Step Predictions", 
+make_plot(xrange=xrange, data=tuple(relpred_avgs), dnames=names, title="Prediction Relative Error -- " + args.dataset, 
     mark=0, axlabels=("steps", "relative error"), legendloc="upper left",
     marker_step=(len(mse_avgs[0]) // 6), fillbetweens=relpred_errbounds,
-    fillbetween_desc="with 90% confidence interval")
+    fillbetween_desc="with 90% confidence interval", ylim=1)
 
-fullname = "_vs_".join(names)
 plt.savefig("test_results/" + fullname + ".multistep_relpred_err.png")
 
 

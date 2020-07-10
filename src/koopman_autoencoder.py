@@ -217,7 +217,7 @@ class KoopmanAutoencoder(BaseAE):
     def make_run_name(self):
         args = self.args
         run_name = args.name + ".koop."
-        run_name += "{}f_{}b_steps.".format(args.fwd_steps, args.bwd_steps)
+        run_name += "{}fs{}bs.".format(args.fwd_steps, args.bwd_steps)
         run_name += "f{}_b{}_i{}_c{}.".format(args.forward, args.backward, args.identity, args.consistency)
         run_name += self.run_name_common_suffix()
         return run_name

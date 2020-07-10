@@ -6,16 +6,28 @@ import re
 from github.com/erichson/ShallowDecoder.git
 """
 
-def data_from_name(name):
+def get_data_name(name):
+    """
+    convert multiple forms of dataset names to one canonical short name
+    """
     # get rid of dashes and underscores to match easier
     name = re.sub(r"[-_]", "", name)
     if name in ("cylinder", "flowcylinder"):
-        return flow_cylinder()
+        return "cylndr"
     if name in ("cylinderfull", "flowcylinderfull"):
+        return "cyl-full"
+    if name in ("sst", "seasurfacetemp", "seasurfacetemperature"):
+        return "sst"
+    raise ValueError("Unknown dataset " + name)
+
+def data_from_name(name):
+    name = get_data_name(name)
+    if name == "cylndr":
+        return flow_cylinder()
+    if name == "cyl-full":
         return flow_cylinder(full=True)
     if name == "sst":
         return sst()
-    
     raise ValueError("Unknown dataset " + name)
 
 
