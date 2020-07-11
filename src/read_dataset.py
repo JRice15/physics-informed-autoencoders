@@ -3,14 +3,35 @@ from scipy.io import loadmat
 import re
 import abc
 
-"""
-from github.com/erichson/ShallowDecoder.git
-"""
+import cmocean
+import matplotlib.patches as mpatches
+import matplotlib.pyplot as plt
+# do 'conda install basemap' to get this module for some reason
+from mpl_toolkits.basemap import Basemap
+
+
+
+def data_from_name(name):
+    """
+    convert multiple forms of dataset names to one canonical short name
+    """
+    # get rid of dashes and underscores to match easier
+    filtered_name = re.sub(r"[-_]", "", name.lower().strip())
+    if filtered_name in ("cylinder", "flowcylinder"):
+        return FlowCylinder()
+    if filtered_name in ("cylinderfull", "flowcylinderfull"):
+        return FlowCylinder(full=True)
+    if filtered_name in ("sst", "seasurfacetemp", "seasurfacetemperature"):
+        return SST()
+    raise ValueError("Unknown dataset " + name)
+
+
 
 class CustomDataset(abc.ABC):
 
-    def __init__(self, name, X, Xtest):
+    def __init__(self, name, X, Xtest, imshape):
         self.dataname = name
+        self.imshape = imshape
         self.X = X
         self.Xtest = Xtest
         self.Y = None
@@ -40,121 +61,143 @@ class FlowCylinder(CustomDataset):
             X = X[:,65::2,:]
 
         # Split into train and test set
-        Xsmall = X[0:100, :, :]
-        t, m, n = Xsmall.shape
-        
+        Xsmall = X[0:100, :, :]        
         Xsmall = Xsmall.reshape(100, -1)
         Xsmall_test = X[100:151, :, :].reshape(51, -1)
         print("Flow cylinder X shape:", Xsmall.shape, "Xtest shape:", Xsmall_test.shape)
 
-        super().__init__("cylndr")
+        imshape = Xsmall[0].shape
+        name = "cyl-full" if full else "cylndr"
+        super().__init__(name=name, X=Xsmall, Xtest=Xsmall_test, 
+            imshape=imshape)
+
 
     def write_im(self, img, title, filename, directory="train_results", 
             subtitle="", show=False, outline=False):
+        """
+        if show=True, filename and directory can be None
+        """
+        shape = self.imshape
+        img = img.reshape(shape)
+        if not self.full:
+            img = np.repeat(img, 2, axis=0)
+        img = img.T
+
+        x2 = np.arange(0, shape[0], 1)
+        y2 = np.arange(0, shape[1], 1)
+        mX, mY = np.meshgrid(x2, y2)
+        minmax = np.max(np.abs(img)) * 0.65
+
+        plt.figure(facecolor="white",  edgecolor='k', figsize=(7.9,4.7))
+        # light contour (looks blurry otherwise)
+        plt.contourf(mY.T, mX.T, img, 80, cmap=cmocean.cm.balance, alpha=1, vmin=-minmax, vmax=minmax)
+        # heavy contour
+        if outline:
+            plt.contour(mY.T, mX.T, img, 40, colors='black', alpha=0.5, vmin=-minmax, vmax=minmax)
+        im = plt.imshow(img, cmap=cmocean.cm.balance, interpolation='none', vmin=-minmax, vmax=minmax)
+
+        if self.full:
+            wedge = mpatches.Wedge((0,99), 33, 270, 90, ec="#636363", color='#636363',lw = 5, zorder=200)
+            im.axes.add_patch(p=wedge)
+        plt.tight_layout()
+        # plt.axis('off')
+        plt.xticks([])
+        plt.yticks([])
+        plt.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1)
+        plt.xlabel(subtitle)
+        plt.title(title.title())
+
+        if show:
+            plt.show()
+        else:
+            if filename[-1] == ".":
+                ext = "png"
+            else:
+                ext = ".png"
+            filename = directory + "/" + filename + ext
+            plt.savefig(filename)
+        plt.close()
 
 
-def data_from_name(name):
-    """
-    convert multiple forms of dataset names to one canonical short name
-    """
-    # get rid of dashes and underscores to match easier
-    name = re.sub(r"[-_]", "", name)
-    if name in ("cylinder", "flowcylinder"):
-        return FlowCylinder()
-    if name in ("cylinderfull", "flowcylinderfull"):
-        return "cyl-full"
-    if name in ("sst", "seasurfacetemp", "seasurfacetemperature"):
-        return "sst"
-    raise ValueError("Unknown dataset " + name)
+class SST(CustomDataset):
+
+    def __init__(self):
+        X = np.load('data/sstday.npy')
+        lats = np.load('data/lats.npy')
+        lons = np.load('data/lons.npy')
+
+        # make 64x64 crop
+        ybottom = 6
+        xleft = 28
+        xright = -58
+        X = X[:,ybottom:,xleft:xright]
+        lats = lats[ybottom:,xleft:xright]
+        lons = lons[ybottom:,xleft:xright]
+        imshape = X[0].shape
+
+        indices = range(3600)
+        #training_idx, test_idx = indices[:730], indices[730:1000] 
+        training_idx, test_idx = indices[220:1315], indices[1315:2557] # 6 years
+        #training_idx, test_idx = indices[230:2420], indices[2420:2557] # 6 years
+        #training_idx, test_idx = indices[0:1825], indices[1825:2557] # 5 years    
+        #training_idx, test_idx = indices[230:1325], indices[1325:2000] # 3 years
+        
+        # scale
+        m, n = imshape
+        X = X.reshape(-1,m*n)
+        X -= X.mean(axis=0)    
+        X = X.reshape(-1,m*n)
+        X = 2 * (X - np.min(X)) / np.ptp(X) - 1
+        X = X.reshape(-1,m,n) 
+        
+        # split into train and test set
+        X_train = X[training_idx]  
+        X_test = X[test_idx]
+
+        print("SST X shape:", X_train.shape, "Xtest shape:", X_test.shape)
+
+        super().__init__(name="sst", X=X_train, Xtest=X_test, imshape=imshape)
+        self.lats = lats
+        self.lons = lons
 
 
-def rescale(Xsmall, Xsmall_test):
-    """
-    rescale data to between 0 and 1
-    """
-    Xmin = Xsmall.min()
-    Xmax = Xsmall.max()
-    
-    Xsmall = ((Xsmall - Xmin) / (Xmax - Xmin)) 
-    Xsmall_test = ((Xsmall_test - Xmin) / (Xmax - Xmin)) 
+    def write_im(self, img, title, filename, directory="train_results", 
+            subtitle="", show=False, outline=False):
+        img = img.reshape(self.imshape)
+        fig, ax = plt.subplots(1, 1, facecolor="white",  edgecolor='k', figsize=(7,4))
+        # ax = ax.ravel()
+        plt.title(title)
+        mintemp = np.min(img)
+        maxtemp = np.max(img)
+        minmax = np.maximum(mintemp,maxtemp)
 
-    return Xsmall, Xsmall_test
-
-
-
-def flow_cylinder(full=False):
-    X = np.load('data/flow_cylinder.npy')
-    
-    # remove leading edge and halve horizontal resolution
-    if not full:
-        X = X[:,65::2,:]
-
-    # Split into train and test set
-    Xsmall = X[0:100, :, :]
-    t, m, n = Xsmall.shape
-    
-    Xsmall = Xsmall.reshape(100, -1)
-
-    Xsmall_test = X[100:151, :, :].reshape(51, -1)
-
-    print("Flow cylinder X shape:", Xsmall.shape, "Xtest shape:", Xsmall_test.shape)
-    # Xsmall, Xsmall_test = rescale(Xsmall, Xsmall_test)
-
-    def formatter(x):
-        x = x.reshape((m,n))
-        if not full:
-            x = np.repeat(x,2,axis=0)
-        x = np.rot90(x)
-        return x
-
-    return Xsmall, Xsmall_test, formatter, (m,n)
+        m = Basemap(projection='mill',
+                    lon_0 = 180,
+                    llcrnrlat = 16.6,
+                    llcrnrlon = 261.5,
+                    urcrnrlat = 32,
+                    urcrnrlon = 277.9,
+                    #resolution='l',
+                    ax=ax)
+        m.pcolormesh(self.lons, self.lats, img, cmap=cmocean.cm.balance, 
+            latlon=True, alpha=1.0, shading='gouraud', vmin = -minmax, vmax=minmax)
+        m.fillcontinents(color='lightgray', lake_color='aqua')
+        m.drawmapboundary(fill_color='lightgray')
+        m.drawcoastlines(3)
+        plt.tight_layout()
+        
+        plt.xlabel(subtitle)
+        plt.title(title.title())
+        if show:
+            plt.show()
+        else:
+            if filename[-1] == ".":
+                ext = "png"
+            else:
+                ext = ".png"
+            filename = directory + "/" + filename + ext
+            plt.savefig(filename)
+        plt.close()
 
 
-
-def sst():
-
-    X = np.load('data/sstday.npy')
-    #******************************************************************************
-    # Preprocess data
-    #******************************************************************************
-    t, m, n = X.shape
-
-
-    #******************************************************************************
-    # Slect train data
-    #******************************************************************************
-    #indices = np.random.permutation(1400)
-    indices = range(3600)
-    #training_idx, test_idx = indices[:730], indices[730:1000] 
-    training_idx, test_idx = indices[220:1315], indices[1315:2557] # 6 years
-    #training_idx, test_idx = indices[230:2420], indices[2420:2557] # 6 years
-    #training_idx, test_idx = indices[0:1825], indices[1825:2557] # 5 years    
-    #training_idx, test_idx = indices[230:1325], indices[1325:2000] # 3 years
-    
-    
-    # mean subtract
-    X = X.reshape(-1,m*n)
-    X -= X.mean(axis=0)    
-    
-    # scale 
-    X = X.reshape(-1,m*n)
-    X = 2 * (X - np.min(X)) / np.ptp(X) - 1
-    X = X.reshape(-1,m,n) 
-    
-    # split into train and test set
-    
-    X_train = X[training_idx]  
-    X_test = X[test_idx]
-
- 
-    #******************************************************************************
-    # Return train and test set
-    #******************************************************************************
-    print("SST X shape:", X_train.shape, "Xtest shape:", X_test.shape)
-    # return X_train, X_test, X_train, X_test, m, n
-
-    def formatter(x):
-        return x.reshape((m,n))
-
-    return X_train, X_test, formatter, (m,n)
 

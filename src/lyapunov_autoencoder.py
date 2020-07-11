@@ -104,11 +104,11 @@ class LyapunovStableDense(Dense):
 
 class LyapunovAutoencoder(BaseAE):
 
-    def __init__(self, args, datashape):
-        super().__init__(args)
+    def __init__(self, args, dataset=None):
+        super().__init__(args, dataset)
         self.build_model(
-            snapshot_shape=datashape,
-            output_dims=datashape[-1],
+            snapshot_shape=dataset.imshape,
+            output_dims=dataset.imshape[-1],
             kappa=args.kappa,
             lambda_=args.lambd,
             gamma=args.gamma,
@@ -172,15 +172,16 @@ class LyapunovAutoencoder(BaseAE):
         run_name += self.run_name_common_suffix()
         return run_name
 
-    def format_data(self, X, Xtest):
+    def format_data(self):
         # targets one timestep ahead of inputs
-        self.Y = X[:-1]
-        self.X = X[1:]
-        Ytest = Xtest[:-1]
-        Xtest = Xtest[1:]
+        self.Y = self.dataset.X[:-1]
+        self.X = self.dataset.X[1:]
+        Ytest = self.dataset.Xtest[:-1]
+        Xtest = self.dataset.Xtest[1:]
         self.val_data = (Xtest, Ytest)
 
     def train(self, callbacks):
+        self.format_data()
         H = self.model.fit(
             x=self.X, 
             y=self.Y,

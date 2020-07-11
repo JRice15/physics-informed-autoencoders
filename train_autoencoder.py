@@ -109,15 +109,12 @@ elif args.load:
 set_seed(args.seed)
 
 # Read Data
-X, Xtest, data_formatter, imshape = data_from_name(args.dataset)
-datashape = X[0].shape
+dataset = data_from_name(args.dataset)
 
 if model_type == "lyapunov":
-    autoencoder = LyapunovAutoencoder(args, datashape)
+    autoencoder = LyapunovAutoencoder(args, dataset)
 elif model_type == "koopman":
-    autoencoder = KoopmanAutoencoder(args, datashape)
-
-autoencoder.format_data(X, Xtest)
+    autoencoder = KoopmanAutoencoder(args, dataset)
 
 run_name = autoencoder.make_run_name()
 make_dirs(run_name)

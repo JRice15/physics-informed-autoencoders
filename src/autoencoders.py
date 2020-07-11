@@ -106,12 +106,13 @@ class BaseAE(abc.ABC):
     base container class for autoencoders
     """
 
-    def __init__(self, args):
+    def __init__(self, args, dataset):
         self.args = args
+        self.dataset = dataset
 
     def run_name_common_suffix(self):
         args = self.args
-        run_name = get_data_name(args.dataset) + "."
+        run_name = self.dataset.dataname + "."
         run_name += "{}ep_{}bs_{}lr_{}wd_{}gc.".format(args.epochs, args.batchsize, args.lr, args.wd, args.gradclip)
         run_name += "s" + "_".join([str(i) for i in args.sizes])
         run_name += ".{}".format(args.seed)
@@ -126,7 +127,7 @@ class BaseAE(abc.ABC):
         ...
     
     @abc.abstractmethod
-    def format_data(self, X, Xtest):
+    def format_data(self, dataset):
         ...
 
     @abc.abstractmethod

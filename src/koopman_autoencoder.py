@@ -106,15 +106,15 @@ class KoopmanConsistencyLayer(Dense):
 
 class KoopmanAutoencoder(BaseAE):
 
-    def __init__(self, args, datashape):
-        super().__init__(args)
+    def __init__(self, args, dataset=None):
+        super().__init__(args, dataset)
         if args.bwd_steps > 0:
             self.has_bwd = True
         else:
             self.has_bwd = False
         self.build_model(
-            snapshot_shape=datashape,
-            output_dims=datashape[-1],
+            snapshot_shape=dataset.imshape,
+            output_dims=dataset.imshape[-1],
             fwd_wt=args.forward,
             bwd_wt=args.backward,
             id_wt=args.identity,
@@ -231,12 +231,15 @@ class KoopmanAutoencoder(BaseAE):
             out.append( X[i-bwd_steps:i+fwd_steps+1] )
         return np.array(out)
 
-    def format_data(self, X, Xtest):
-        self.X = self.data_formatter(X, self.args.bwd_steps, self.args.fwd_steps)
-        valX = self.data_formatter(Xtest, self.args.bwd_steps, self.args.fwd_steps)
+    def format_data(self):
+        self.X = self.data_formatter(
+            self.dataset.X, self.args.bwd_steps, self.args.fwd_steps)
+        valX = self.data_formatter(
+            self.dataset.Xtest, self.args.bwd_steps, self.args.fwd_steps)
         self.val_data = (valX, None)
 
     def train(self, callbacks):
+        self.format_data()
         H = self.model.fit(
             x=self.X,
             y=None,
