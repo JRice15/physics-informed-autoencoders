@@ -21,34 +21,31 @@ class ImgWriter(Callback):
         epochs: total epochs
     """
 
-    def __init__(self, pipeline, run_name, Xtest, Ytest, data_formatter, freq=1000):
+    def __init__(self, pipeline, run_name, dataset: CustomDataset, freq=1000):
         super().__init__()
         encoder, dynamics, decoder = pipeline
         self.encoder = encoder
         self.dynamics = dynamics
         self.decoder = decoder
         self.freq = freq
-        self.data_formatter = data_formatter
         self.dir = "train_results/" + run_name
         self.run_name = run_name
-        self.X = tf.reshape(Xtest[7], (1, -1))
-        self.write_truths(Ytest)
-    
-    def write_truths(self, Ytest):
-        targ = self.data_formatter(Ytest[7])
-        inpt = self.data_formatter(Ytest[6])
-        # write_im(targ, "Target Y(t+1)", "target_outlined", "train_results", outline=True)
-        write_im(targ, "Target Y(t+1)", "target", "train_results")
-        # write_im(inpt, "Input Y(t)", "input_outlined", "train_results", outline=True)
-        write_im(inpt, "Input Y(t)", "input", "train_results")
+        self.dataset = dataset
+        self.X = tf.reshape(dataset.Xtest[dataset.write_index], (1, -1))
+        self.Y = tf.reshape(dataset.Xtest[dataset.write_index+1], (-1, 1))
+
+        self.dataset.write_im(K.eval(self.X), title="Input Y(t)", 
+            filename="input."+dataset.dataname, directory="train_results")
+        self.dataset.write_im(K.eval(self.Y), title="Target Y(t+1)", 
+            filename="target."+dataset.dataname, directory="train_results")
+
 
     def on_epoch_end(self, epoch, logs=None):
         if (epoch + 1) % self.freq == 0:
             print("Saving result image...")
             result = self.decoder(self.dynamics(self.encoder(self.X)))
-            result = self.data_formatter(K.eval(result))
-            write_im(
-                img=result,
+            self.dataset.write_im(
+                img=K.eval(result),
                 title="Epoch {} Prediction".format(epoch+1),
                 subtitle=self.run_name,
                 filename="pred_epoch_{}.".format(epoch+1),

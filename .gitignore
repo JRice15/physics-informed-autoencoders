@@ -5,3 +5,7 @@ __pycache__/
 logs/
 weights/
 models/
+test_results/
+train_results/
+data/
+stats/

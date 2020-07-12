@@ -113,8 +113,8 @@ class KoopmanAutoencoder(BaseAE):
         else:
             self.has_bwd = False
         self.build_model(
-            snapshot_shape=dataset.imshape,
-            output_dims=dataset.imshape[-1],
+            snapshot_shape=dataset.input_shape,
+            output_dims=dataset.input_shape[-1],
             fwd_wt=args.forward,
             bwd_wt=args.backward,
             id_wt=args.identity,
@@ -232,6 +232,7 @@ class KoopmanAutoencoder(BaseAE):
         return np.array(out)
 
     def format_data(self):
+        print("fmt data X shape:", self.dataset.X.shape)
         self.X = self.data_formatter(
             self.dataset.X, self.args.bwd_steps, self.args.fwd_steps)
         valX = self.data_formatter(

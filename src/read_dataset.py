@@ -29,9 +29,11 @@ def data_from_name(name):
 
 class CustomDataset(abc.ABC):
 
-    def __init__(self, name, X, Xtest, imshape):
+    def __init__(self, name, X, Xtest, imshape, input_shape, write_index):
         self.dataname = name
         self.imshape = imshape
+        self.input_shape = input_shape
+        self.write_index = write_index
         self.X = X
         self.Xtest = Xtest
         self.Y = None
@@ -59,6 +61,7 @@ class FlowCylinder(CustomDataset):
         # remove leading edge and halve horizontal resolution
         if not self.full:
             X = X[:,65::2,:]
+        imshape = X[0].shape
 
         # Split into train and test set
         Xsmall = X[0:100, :, :]        
@@ -66,10 +69,9 @@ class FlowCylinder(CustomDataset):
         Xsmall_test = X[100:151, :, :].reshape(51, -1)
         print("Flow cylinder X shape:", Xsmall.shape, "Xtest shape:", Xsmall_test.shape)
 
-        imshape = Xsmall[0].shape
         name = "cyl-full" if full else "cylndr"
         super().__init__(name=name, X=Xsmall, Xtest=Xsmall_test, 
-            imshape=imshape)
+            imshape=imshape, input_shape=Xsmall[0].shape, write_index=7)
 
 
     def write_im(self, img, title, filename, directory="train_results", 
@@ -83,8 +85,9 @@ class FlowCylinder(CustomDataset):
             img = np.repeat(img, 2, axis=0)
         img = img.T
 
-        x2 = np.arange(0, shape[0], 1)
-        y2 = np.arange(0, shape[1], 1)
+        shape0 = shape[0] if self.full else 2*shape[0]
+        x2 = np.arange(0, shape[1], 1)
+        y2 = np.arange(0, shape0, 1)
         mX, mY = np.meshgrid(x2, y2)
         minmax = np.max(np.abs(img)) * 0.65
 
@@ -148,7 +151,7 @@ class SST(CustomDataset):
         X -= X.mean(axis=0)    
         X = X.reshape(-1,m*n)
         X = 2 * (X - np.min(X)) / np.ptp(X) - 1
-        X = X.reshape(-1,m,n) 
+        X = X.reshape(-1,m*n) 
         
         # split into train and test set
         X_train = X[training_idx]  
@@ -156,7 +159,8 @@ class SST(CustomDataset):
 
         print("SST X shape:", X_train.shape, "Xtest shape:", X_test.shape)
 
-        super().__init__(name="sst", X=X_train, Xtest=X_test, imshape=imshape)
+        super().__init__(name="sst", X=X_train, Xtest=X_test, imshape=imshape,
+            input_shape=X_train[0].shape, write_index=140)
         self.lats = lats
         self.lons = lons
 
@@ -185,7 +189,7 @@ class SST(CustomDataset):
         m.drawmapboundary(fill_color='lightgray')
         m.drawcoastlines(3)
         plt.tight_layout()
-        
+
         plt.xlabel(subtitle)
         plt.title(title.title())
         if show:

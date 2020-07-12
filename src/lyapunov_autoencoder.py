@@ -107,8 +107,8 @@ class LyapunovAutoencoder(BaseAE):
     def __init__(self, args, dataset=None):
         super().__init__(args, dataset)
         self.build_model(
-            snapshot_shape=dataset.imshape,
-            output_dims=dataset.imshape[-1],
+            snapshot_shape=dataset.input_shape,
+            output_dims=dataset.input_shape[-1],
             kappa=args.kappa,
             lambda_=args.lambd,
             gamma=args.gamma,
