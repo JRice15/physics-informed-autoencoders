@@ -36,19 +36,23 @@ def make_dirs(dirname):
     os.makedirs("logs", exist_ok=True)
 
 
-# Get model type first
+# Get model and dataset first
 parser = argparse.ArgumentParser(description="Select model first")
 parser.add_argument("--model",required=True,choices=["koopman","lyapunov"],help="name of the model to use")
+parser.add_argument("--dataset",type=str,default="flow_cylinder",help="name of dataset")
 args, unknown = parser.parse_known_args()
 
 model_type = args.model
 if model_type == "lyapunov":
-    defaults_file = "presets/orig-paper-cylinder.lyapunov.json"
     num_sizes = 3
 elif model_type == "koopman":
-    defaults_file = "presets/orig-paper-cylinder.koopman.json"
     num_sizes = 2
 
+# Read Data
+dataset = data_from_name(args.dataset)
+
+defaults_file = "presets/orig-paper.{}.{}.json".format(model_type, 
+    dataset.__class__.__name__.lower())
 with open(defaults_file, "r") as f:
     defaults = json.load(f)
 
@@ -107,9 +111,6 @@ elif args.load:
 
 
 set_seed(args.seed)
-
-# Read Data
-dataset = data_from_name(args.dataset)
 
 if model_type == "lyapunov":
     autoencoder = LyapunovAutoencoder(args, dataset)
