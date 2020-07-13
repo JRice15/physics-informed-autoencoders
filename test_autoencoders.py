@@ -89,16 +89,20 @@ def run_one_test(model_path, data, num_steps):
 
     print("\n")
     print(model_path)
+
+    x = []
+    for i in range(num_snapshots - num_steps):
+        snapshot = tfdata[:,i,:]
+        x.append(encoder(snapshot))
+
     for step in range(1, num_steps+1):
         step_mse = []
         step_relpred_err = []
         for i in range(num_snapshots - num_steps):
-            snapshot = tfdata[:,i,:]
 
-            x = encoder(snapshot)
-            for _ in range(step):
-                x = dynamics(x)
-            pred = decoder(x).numpy()
+            # next step
+            x[i] = dynamics(x[i])
+            pred = decoder(x[i]).numpy()
             true = data[:,i+step,:]
 
             mse = np.mean((true - pred) ** 2)

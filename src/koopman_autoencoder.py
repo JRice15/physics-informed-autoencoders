@@ -154,7 +154,6 @@ class KoopmanAutoencoder(BaseAE):
         decoder = AutoencoderBlock((intermediate, intermediate, output_dims), weight_decay,
             name="decoder")
         if self.has_bwd:
-            # need to build fwd layer to access its weights in backward ConsistencyLayer
             inshape = encoder(current).shape
             backward = KoopmanConsistencyLayer(in_shape=inshape, 
                 pair_layer=forward, cons_wt=cons_wt, 
