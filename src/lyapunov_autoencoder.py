@@ -115,7 +115,6 @@ class LyapunovAutoencoder(BaseAE):
             lambda_=args.lambd,
             gamma=args.gamma,
             no_stability=args.no_stability,
-            dyn_units=dyn_units,
             weight_decay=args.wd,
         )
 
@@ -128,10 +127,9 @@ class LyapunovAutoencoder(BaseAE):
                 batchnorm_last=True)
             self.decoder = DenseAutoencoderBlock((medium, large, output_dims), args.wd,
                 name="decoder")
-            return small
 
     def build_model(self, snapshot_shape, output_dims, lambda_, kappa, gamma,
-            no_stability, dyn_units, weight_decay):
+            no_stability, weight_decay):
         """
         Create a lyapunov autoencoder model
         Args:
@@ -144,10 +142,11 @@ class LyapunovAutoencoder(BaseAE):
         inpt = Input(snapshot_shape)
         print("Autoencoder Input shape:", inpt.shape)
 
+        x = self.encoder(inpt)
+        dyn_units = x.shape[-1]
         self.dynamics = LyapunovStableDense(kappa=kappa, gamma=gamma, weight_decay=weight_decay,
             no_stab=no_stability, units=dyn_units, name="lyapunov-dynamics")
 
-        x = self.encoder(inpt)
         x = self.dynamics(x)
         x = self.decoder(x)
 

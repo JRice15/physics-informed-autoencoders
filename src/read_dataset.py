@@ -65,9 +65,11 @@ class FlowCylinder(CustomDataset):
         imshape = X[0].shape
 
         # Split into train and test set
-        Xsmall = X[0:100, :, :]        
-        Xsmall = Xsmall.reshape(100, -1)
-        Xsmall_test = X[100:151, :, :].reshape(51, -1)
+        Xsmall = X[0:100, :, :]
+        Xsmall_test = X[100:151, :, :]
+        if flat:
+            Xsmall = Xsmall.reshape(100, -1)
+            Xsmall_test = Xsmall_test.reshape(51, -1)
         print("Flow cylinder X shape:", Xsmall.shape, "Xtest shape:", Xsmall_test.shape)
 
         name = "cyl-full" if full else "cylndr"
@@ -154,7 +156,10 @@ class SST(CustomDataset):
         X -= X.mean(axis=0)    
         X = X.reshape(-1,m*n)
         X = 2 * (X - np.min(X)) / np.ptp(X) - 1
-        X = X.reshape(-1,m*n) 
+        if flat:
+            X = X.reshape(-1,m*n) 
+        else:
+            X = X.reshape(-1,m,n) 
         
         # split into train and test set
         X_train = X[training_idx]  

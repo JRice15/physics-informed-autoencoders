@@ -113,7 +113,7 @@ class KoopmanAutoencoder(BaseAE):
             self.has_bwd = True
         else:
             self.has_bwd = False
-        self.build_enc_dec(args, dataset.input_shape[-1])
+        self.build_enc_dec(args, dataset.input_shape)
         self.build_model(
             snapshot_shape=dataset.input_shape,
             output_dims=dataset.input_shape[-1],
@@ -126,7 +126,7 @@ class KoopmanAutoencoder(BaseAE):
             weight_decay=args.wd,
         )
     
-    def build_enc_dec(self, args, output_dims):
+    def build_enc_dec(self, args, input_shape):
         if args.convolutional:
             self.encoder = ConvAutoencoderBlock(args.pool_sizes, args.kernel_sizes, 
                 args.wd, encoder=True, name="encoder")
@@ -136,7 +136,7 @@ class KoopmanAutoencoder(BaseAE):
             intermediate, bottleneck = args.sizes
             self.encoder = DenseAutoencoderBlock((intermediate, intermediate, bottleneck), 
                 args.wd, name="encoder")
-            self.decoder = DenseAutoencoderBlock((intermediate, intermediate, output_dims), 
+            self.decoder = DenseAutoencoderBlock((intermediate, intermediate, input_shape[-1]), 
                 args.wd, name="decoder")
 
 

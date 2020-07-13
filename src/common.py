@@ -9,10 +9,34 @@ from keras.activations import tanh
 from keras.initializers import glorot_normal, zeros
 from keras.models import Model
 from keras import Input
-from keras.layers import Layer, Dense
+from keras.layers import Layer, Dense, Reshape
 
+class AddChannels(Layer):
 
-CUSTOM_OBJ_DICT = {}
+    def __init__(self):
+        super().__init__()
+
+    def build(self, input_shape):
+        self.reshape = Reshape(input_shape + (1,))
+
+    def call(self, x):
+        self.reshape(x)
+
+class RemoveChannels(Layer):
+
+    def __init__(self):
+        super().__init__()
+
+    def build(self, input_shape):
+        self.reshape = Reshape(input_shape[:-1])
+
+    def call(self, x):
+        self.reshape(x)
+
+CUSTOM_OBJ_DICT = {
+    "AddChannels": AddChannels,
+    "RemoveChannels": RemoveChannels
+}
 
 class BaseAE(abc.ABC):
     """
