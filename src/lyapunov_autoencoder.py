@@ -14,7 +14,8 @@ from keras.activations import tanh
 from keras import metrics, losses
 
 from src.common import *
-from src.autoencoders import *
+from src.dense_autoencoders import *
+from src.conv_autoencoders import *
 from src.output_results import *
 
 
@@ -106,6 +107,7 @@ class LyapunovAutoencoder(BaseAE):
 
     def __init__(self, args, dataset=None):
         super().__init__(args, dataset)
+        dyn_units = self.build_enc_dec(args, dataset.input_shape[-1])
         self.build_model(
             snapshot_shape=dataset.input_shape,
             output_dims=dataset.input_shape[-1],
@@ -113,12 +115,23 @@ class LyapunovAutoencoder(BaseAE):
             lambda_=args.lambd,
             gamma=args.gamma,
             no_stability=args.no_stability,
-            sizes=args.sizes,
+            dyn_units=dyn_units,
             weight_decay=args.wd,
         )
 
+    def build_enc_dec(self, args, output_dims):
+        if args.convolutional:
+            ...
+        else:
+            large, medium, small = args.sizes
+            self.encoder = DenseAutoencoderBlock((large, medium, small), args.wd, name="encoder", 
+                batchnorm_last=True)
+            self.decoder = DenseAutoencoderBlock((medium, large, output_dims), args.wd,
+                name="decoder")
+            return small
+
     def build_model(self, snapshot_shape, output_dims, lambda_, kappa, gamma,
-            no_stability, sizes, weight_decay):
+            no_stability, dyn_units, weight_decay):
         """
         Create a lyapunov autoencoder model
         Args:
@@ -131,31 +144,21 @@ class LyapunovAutoencoder(BaseAE):
         inpt = Input(snapshot_shape)
         print("Autoencoder Input shape:", inpt.shape)
 
-        large, medium, small = sizes
+        self.dynamics = LyapunovStableDense(kappa=kappa, gamma=gamma, weight_decay=weight_decay,
+            no_stab=no_stability, units=dyn_units, name="lyapunov-dynamics")
 
-        encoder = AutoencoderBlock((large, medium, small), weight_decay, name="encoder", 
-            batchnorm_last=True)
-        dynamics = LyapunovStableDense(kappa=kappa, gamma=gamma, weight_decay=weight_decay,
-            no_stab=no_stability, units=small, name="lyapunovstable-dynamics")
-        decoder = AutoencoderBlock((medium, large, output_dims), weight_decay,
-            name="decoder")
+        x = self.encoder(inpt)
+        x = self.dynamics(x)
+        x = self.decoder(x)
 
-        x = encoder(inpt)
-        x = dynamics(x)
-        x = decoder(x)
-
-        model = Model(inpt, x)
+        self.model = Model(inpt, x)
 
         # inverse regularizer of encoder-decoder
-        inv_loss = lambda_ * inverse_reg(inpt, encoder, decoder)
+        inv_loss = lambda_ * inverse_reg(inpt, self.encoder, self.decoder)
 
-        model.add_loss(inv_loss)
-        model.add_metric(inv_loss, name="inverse_loss", aggregation='mean')
+        self.model.add_loss(inv_loss)
+        self.model.add_metric(inv_loss, name="inverse_loss", aggregation='mean')
 
-        self.model = model
-        self.encoder = encoder
-        self.dynamics = dynamics
-        self.decoder = decoder
     
     def compile_model(self, optimizer):
         self.model.compile(optimizer=optimizer, loss=losses.mse, 

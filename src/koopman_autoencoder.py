@@ -14,7 +14,8 @@ from keras.activations import tanh
 from keras import regularizers
 
 from src.common import *
-from src.autoencoders import *
+from src.dense_autoencoders import *
+from src.conv_autoencoders import *
 from src.output_results import *
 
 
@@ -112,6 +113,7 @@ class KoopmanAutoencoder(BaseAE):
             self.has_bwd = True
         else:
             self.has_bwd = False
+        self.build_enc_dec(args, dataset.input_shape[-1])
         self.build_model(
             snapshot_shape=dataset.input_shape,
             output_dims=dataset.input_shape[-1],
@@ -121,12 +123,25 @@ class KoopmanAutoencoder(BaseAE):
             cons_wt=args.consistency,
             forward_steps=args.fwd_steps,
             backward_steps=args.bwd_steps,
-            sizes=args.sizes,
             weight_decay=args.wd,
         )
     
+    def build_enc_dec(self, args, output_dims):
+        if args.convolutional:
+            self.encoder = ConvAutoencoderBlock(args.pool_sizes, args.kernel_sizes, 
+                args.wd, encoder=True, name="encoder")
+            self.decoder = ConvAutoencoderBlock(args.pool_sizes[::-1], args.kernel_sizes, 
+                args.wd, encoder=False, name="encoder")
+        else:
+            intermediate, bottleneck = args.sizes
+            self.encoder = DenseAutoencoderBlock((intermediate, intermediate, bottleneck), 
+                args.wd, name="encoder")
+            self.decoder = DenseAutoencoderBlock((intermediate, intermediate, output_dims), 
+                args.wd, name="decoder")
+
+
     def build_model(self, snapshot_shape, output_dims, fwd_wt, bwd_wt, id_wt, 
-            cons_wt, forward_steps, backward_steps, sizes, weight_decay):
+            cons_wt, forward_steps, backward_steps, weight_decay):
         """
         Create a Koopman autoencoder
         Args:
@@ -140,75 +155,59 @@ class KoopmanAutoencoder(BaseAE):
         """
         total_inpt_snapshots = backward_steps + 1 + forward_steps
         inpt = Input((total_inpt_snapshots,) + snapshot_shape)
-        tf.print("inpt shape:", inpt.shape)
         current = inpt[:,backward_steps,:]
-        tf.print("current shape:", current.shape)
         print("Autoencoder Input shape:", inpt.shape, "current shape:", current.shape)
 
-        intermediate, bottleneck = sizes
-
-        encoder = AutoencoderBlock((intermediate, intermediate, bottleneck), weight_decay,
-            name="encoder")
-        forward = Dense(bottleneck, use_bias=False, name="forward-dynamics",
+        inshape = self.encoder(current).shape
+        self.forward = Dense(inshape[-1], use_bias=False, name="forward-dynamics",
             kernel_initializer=glorot_normal(), kernel_regularizer=regularizers.l2(weight_decay))
-        decoder = AutoencoderBlock((intermediate, intermediate, output_dims), weight_decay,
-            name="decoder")
+
         if self.has_bwd:
-            inshape = encoder(current).shape
-            backward = KoopmanConsistencyLayer(in_shape=inshape, 
-                pair_layer=forward, cons_wt=cons_wt, 
-                units=bottleneck, use_bias=False, weight_decay=weight_decay,
+            self.backward = KoopmanConsistencyLayer(in_shape=inshape, 
+                pair_layer=self.forward, cons_wt=cons_wt, 
+                units=inshape[-1], use_bias=False, weight_decay=weight_decay,
                 name="backward-dynamics")
+        else:
+            self.backward = None
 
         # predict pred_steps into the future
-        encoded_out = encoder(current)
+        encoded_out = self.encoder(current)
         # outputs is list [earliest_backward_pred, ... latest_forward_pred]
         outputs = []
-        # for each step size
-        for s in range(1, forward_steps+1):
-            # compute the forward and backward predictions
-            x_f = encoded_out
-            for _ in range(s):
-                x_f = forward(x_f)
-            outputs.append(decoder(x_f))
-        
-        for s in range(1, backward_steps+1):
-            x_b = encoded_out
-            for _ in range(s):
-                x_b = backward(x_b)
-            outputs.insert(0, decoder(x_b))
 
-        model = Model(inputs=inpt, outputs=outputs)
+        x_f = encoded_out
+        for _ in range(forward_steps):
+            x_f = self.forward(x_f)
+            outputs.append(self.decoder(x_f))
+        
+        x_b = encoded_out
+        for _ in range(backward_steps):
+            x_b = self.backward(x_b)
+            outputs.insert(0, self.decoder(x_b))
+
+        self.model = Model(inputs=inpt, outputs=outputs)
 
         # Forward and Backward Dynamics Regularizers
         fwd_pred = tf.stack(outputs[backward_steps:], axis=1)
         fwd_true = inpt[:,backward_steps+1:,:]
         fwd_loss = fwd_wt * tf.reduce_mean((fwd_true - fwd_pred) ** 2)
-        model.add_loss(fwd_loss)
-        model.add_metric(fwd_loss, name="fwd_loss", aggregation="mean")
+        self.model.add_loss(fwd_loss)
+        self.model.add_metric(fwd_loss, name="fwd_loss", aggregation="mean")
 
         if self.has_bwd:
             bwd_pred = tf.stack(outputs[:backward_steps], axis=1)
             bwd_true = inpt[:,:backward_steps,:]
             bwd_loss = bwd_wt * tf.reduce_mean((bwd_true - bwd_pred) ** 2)
-            model.add_loss(bwd_loss)
-            model.add_metric(bwd_loss, name="bwd_loss", aggregation="mean")
+            self.model.add_loss(bwd_loss)
+            self.model.add_metric(bwd_loss, name="bwd_loss", aggregation="mean")
 
         # Encoder-Decoder Identity
         id_loss = id_wt * inverse_reg(current, encoder, decoder)
-        model.add_loss(id_loss)
-        model.add_metric(id_loss, name="id_loss", aggregation="mean")
+        self.model.add_loss(id_loss)
+        self.model.add_metric(id_loss, name="id_loss", aggregation="mean")
 
-        # model.summary()
+        # self.model.summary()
 
-        self.model = model
-        self.encoder = encoder
-        self.forward = forward
-        self.decoder = decoder
-        if self.has_bwd:
-            self.backward = backward
-        else:
-            self.backward = None
 
     def compile_model(self, optimizer):
         self.model.compile(optimizer=optimizer, loss=None)

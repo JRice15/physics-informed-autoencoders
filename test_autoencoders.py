@@ -16,7 +16,8 @@ from keras import Input
 from keras.models import Model
 
 from src.common import *
-from src.autoencoders import *
+from src.dense_autoencoders import *
+from src.conv_autoencoders import *
 from src.lyapunov_autoencoder import *
 from src.koopman_autoencoder import *
 from src.output_results import *
@@ -27,7 +28,7 @@ print("Keras version:", keras.__version__) # 2.4.3
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument("--dataset",default="flow_cylinder",help="name of the dataset to use")
+parser.add_argument("--dataset",required=True,help="name of the dataset to use")
 parser.add_argument("--pred-steps",type=int,default=50,help="number of timesteps to predict")
 parser.add_argument("--file",default=None,help="file with weights paths to compare. Each line should be: '<name><tab-character><weights path>'")
 parser.add_argument("--seed",type=int,default=0)
@@ -35,6 +36,7 @@ parser.add_argument("--seed",type=int,default=0)
 args = parser.parse_args()
 
 set_seed(args.seed)
+os.makedirs("test_results/truth",exist_ok=True)
 
 def get_pipeline(model):
     """
@@ -111,13 +113,13 @@ def run_one_test(model_path, data, num_steps):
             relpred_err = np.linalg.norm(pred - true) / np.linalg.norm(true)
             step_relpred_err.append(relpred_err)
 
-            if (step % 10 == 0 or step in (1,3,5)) and i == 7:
+            if (step % 10 == 0 or step in (1,3,5)) and i == dataset.write_index:
                 dataset.write_im(pred, title=str(step) + " steps prediction", 
                     filename="pred_step" + str(step), directory="test_results/"+dirname )
-                if not os.path.exists("test_results/truth/truth_step" + str(step) + ".png"):
-                    os.makedirs("test_results/truth",exist_ok=True)
+                truthfile = "test_results/truth/" + dataset.dataname + ".truth_step" + str(step) + ".png"
+                if not os.path.exists(truthfile):
                     dataset.write_im(true, title=str(step) + " steps ground truth", 
-                        filename="truth_step" + str(step), directory="test_results/truth")
+                        filename=dataset.dataname + ".truth_step" + str(step), directory="test_results/truth")
         
         mean_mse = np.mean(step_mse)
         mean_relpred_err = np.mean(step_relpred_err)

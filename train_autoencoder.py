@@ -40,6 +40,7 @@ def make_dirs(dirname):
 parser = argparse.ArgumentParser(description="Select model first")
 parser.add_argument("--model",required=True,choices=["koopman","lyapunov"],help="name of the model to use")
 parser.add_argument("--dataset",type=str,default="flow_cylinder",help="name of dataset")
+parser.add_argument("--convolutional",action="store_true",default=False,help="create a convolutional version of the model")
 args, unknown = parser.parse_known_args()
 
 model_type = args.model
@@ -48,13 +49,23 @@ if model_type == "lyapunov":
 elif model_type == "koopman":
     num_sizes = 2
 
-# Read Data
-dataset = data_from_name(args.dataset)
 
-defaults_file = "presets/orig-paper.{}.{}.json".format(model_type, 
-    dataset.__class__.__name__.lower())
-with open(defaults_file, "r") as f:
-    defaults = json.load(f)
+# Read Data
+dataset = data_from_name(args.dataset, (not args.convolutional))
+
+if args.convolutional:
+    defaults_file = "presets/conv-default.{}.{}.json".format(model_type, 
+        dataset.__class__.__name__.lower())
+else:
+    defaults_file = "presets/orig-paper.{}.{}.json".format(model_type, 
+        dataset.__class__.__name__.lower())
+
+try:
+    with open(defaults_file, "r") as f:
+        defaults = json.load(f)
+except FileNotFoundError:
+    raise FileNotFoundError("Defaults file for this model and dataset configuration could not be found. Create "
+        "a file '{}' with the desired presets".format(defaults_file))
 
 # Parse Full Args
 parser = argparse.ArgumentParser(description="see Erichson et al's 'PHYSICS-INFORMED "
@@ -63,6 +74,7 @@ parser = argparse.ArgumentParser(description="see Erichson et al's 'PHYSICS-INFO
 
 parser.add_argument("--model",required=True,choices=["koopman","lyapunov"],help="name of the model to use")
 parser.add_argument("--name",type=str,required=True,help="name of this training run")
+parser.add_argument("--convolutional",action="store_true",default=False,help="create a convolutional version of the model")
 parser.add_argument("--dataset",type=str,default="flow_cylinder",help="name of dataset")
 parser.add_argument("--lr",type=float,default=defaults["lr"],help="learning rate")
 parser.add_argument("--wd",type=float,default=defaults["wd"],help="weight decay weighting factor")
@@ -70,7 +82,12 @@ parser.add_argument("--gradclip",type=float,default=defaults["gradclip"],help="g
 parser.add_argument("--seed",type=int,default=0,help="random seed")
 parser.add_argument("--epochs",type=int,default=defaults["epochs"])
 parser.add_argument("--batchsize",type=int,default=defaults["batchsize"])
-parser.add_argument("--sizes",type=int,default=defaults["sizes"],nargs=num_sizes,help="encoder layer output widths in decreasing order of size")
+
+if args.convolutional:
+    parser.add_argument("--sizes",type=int,default=defaults["sizes"],nargs=num_sizes,help="encoder layer output widths in decreasing order of size")
+else:
+    parser.add_argument("--pool-sizes",type=int,default=defaults["pool_sizes"],nargs=3,help="encoder layer pool sizes (must be tuned to fit dataset dimensions")
+    parser.add_argument("--kernel-sizes",type=int,default=defaults["kernel_sizes"],nargs=3,help="encoder layer output widths in decreasing order of size")
 
 if model_type == "lyapunov":
     parser.add_argument("--lambd",type=float,default=defaults["lambd"],help="inverse regularizer weight")

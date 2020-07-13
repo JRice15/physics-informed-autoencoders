@@ -17,10 +17,6 @@ from keras.models import Model
 from src.common import *
 from src.read_dataset import *
 
-"""
-generic autoencoder building blocks to be used between implementations
-"""
-
 
 
 class FullyConnectedBlock(Layer):
@@ -29,10 +25,11 @@ class FullyConnectedBlock(Layer):
     """
 
     def __init__(self, name, output_dims, weight_decay, activate=True, 
-            batchnorm=False, *args, **kwargs):
-        super().__init__(name=name, *args, **kwargs)
+            batchnorm=False, **kwargs):
+        super().__init__(name=name, **kwargs)
         self.output_dims = output_dims
         self.weight_decay = weight_decay
+        self.conv = conv
 
         self.dense = Dense(output_dims,
             kernel_initializer=glorot_normal(), # aka Xavier Normal
@@ -66,22 +63,23 @@ class FullyConnectedBlock(Layer):
         return config
 
 
-class AutoencoderBlock(Layer):
+class DenseAutoencoderBlock(Layer):
     """
     block of 3 fully connected layers, either for encoder or decoder
     """
 
     def __init__(self, sizes, weight_decay, name, activate_last=False, 
-            batchnorm_last=False, *args, **kwargs):
-        super().__init__(name=name, *args, **kwargs)
+            batchnorm_last=False, **kwargs):
+        super().__init__(name=name, **kwargs)
         self.sizes = sizes
         self.weight_decay = weight_decay
         self.activate_last = activate_last
         self.batchnorm_last = batchnorm_last
+        self.conv = conv
 
         self.block1 = FullyConnectedBlock(name+"1", sizes[0], weight_decay)
         self.block2 = FullyConnectedBlock(name+"2", sizes[1], weight_decay)
-        self.block3 = FullyConnectedBlock(name+"3", sizes[2], weight_decay, 
+        self.block3 = FullyConnectedBlock(name+"3", sizes[2], weight_decay,
             activate=activate_last, batchnorm=batchnorm_last)
 
     def call(self, x):
@@ -101,60 +99,7 @@ class AutoencoderBlock(Layer):
         return config
 
 
-class BaseAE(abc.ABC):
-    """
-    base container class for autoencoders
-    """
-
-    def __init__(self, args, dataset):
-        self.args = args
-        self.dataset = dataset
-
-    def run_name_common_suffix(self):
-        args = self.args
-        run_name = self.dataset.dataname + "."
-        run_name += "{}ep_{}bs_{}lr_{}wd_{}gc.".format(args.epochs, args.batchsize, args.lr, args.wd, args.gradclip)
-        run_name += "s" + "_".join([str(i) for i in args.sizes])
-        run_name += ".{}".format(args.seed)
-        return run_name
-
-    @abc.abstractmethod
-    def build_model(self, args):
-        ...
-
-    @abc.abstractmethod
-    def make_run_name(self):
-        ...
-    
-    @abc.abstractmethod
-    def format_data(self, dataset):
-        ...
-
-    @abc.abstractmethod
-    def compile_model(self, optimizer):
-        ...
-
-    @abc.abstractmethod
-    def train(self, callbacks):
-        """
-        call model.fit, return History
-        """
-        ...
-
-    @abc.abstractmethod
-    def get_pipeline(self):
-        """
-        get forward prediction pipeline
-        """
-        ...
-
-    @abc.abstractmethod
-    def save_eigenvals(self):
-        ...
-
-
-CUSTOM_OBJ_DICT = {
-    "AutoencoderBlock": AutoencoderBlock,
-    "FullyConnectedBlock": FullyConnectedBlock,
-}
-
+CUSTOM_OBJ_DICT.update({
+    "DenseAutoencoderBlock": DenseAutoencoderBlock,
+    "FullyConnectedBlock": FullyConnectedBlock
+})

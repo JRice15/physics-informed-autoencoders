@@ -11,18 +11,18 @@ from mpl_toolkits.basemap import Basemap
 
 
 
-def data_from_name(name):
+def data_from_name(name, flat):
     """
     convert multiple forms of dataset names to one canonical short name
     """
     # get rid of dashes and underscores to match easier
     filtered_name = re.sub(r"[-_]", "", name.lower().strip())
     if filtered_name in ("cylinder", "flowcylinder"):
-        return FlowCylinder()
+        return FlowCylinder(flat)
     if filtered_name in ("cylinderfull", "flowcylinderfull"):
-        return FlowCylinder(full=True)
+        return FlowCylinder(flat, full=True)
     if filtered_name in ("sst", "seasurfacetemp", "seasurfacetemperature"):
-        return SST()
+        return SST(flat)
     raise ValueError("Unknown dataset " + name)
 
 
@@ -54,8 +54,9 @@ class CustomDataset(abc.ABC):
 
 class FlowCylinder(CustomDataset):
 
-    def __init__(self, full=False):
+    def __init__(self, flat, full=False):
         self.full = full
+        self.flat = flat
 
         X = np.load('data/flow_cylinder.npy')
         # remove leading edge and halve horizontal resolution
@@ -124,7 +125,9 @@ class FlowCylinder(CustomDataset):
 
 class SST(CustomDataset):
 
-    def __init__(self):
+    def __init__(self, flat):
+        self.flat = flat
+
         X = np.load('data/sstday.npy')
         lats = np.load('data/lats.npy')
         lons = np.load('data/lons.npy')

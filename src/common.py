@@ -1,4 +1,6 @@
 import math
+import sys
+import abc
 
 import keras.backend as K
 import numpy as np
@@ -8,6 +10,64 @@ from keras.initializers import glorot_normal, zeros
 from keras.models import Model
 from keras import Input
 from keras.layers import Layer, Dense
+
+
+CUSTOM_OBJ_DICT = {}
+
+class BaseAE(abc.ABC):
+    """
+    base container class for autoencoders
+    """
+
+    def __init__(self, args, dataset):
+        self.args = args
+        self.dataset = dataset
+
+    def run_name_common_suffix(self):
+        args = self.args
+        run_name = self.dataset.dataname + "."
+        run_name += "{}ep_{}bs_{}lr_{}wd_{}gc.".format(args.epochs, args.batchsize, args.lr, args.wd, args.gradclip)
+        run_name += "s" + "_".join([str(i) for i in args.sizes])
+        run_name += ".{}".format(args.seed)
+        return run_name
+
+    @abc.abstractmethod
+    def build_enc_dec(self, args, output_dims):
+        ...
+
+    @abc.abstractmethod
+    def build_model(self, *args):
+        ...
+
+    @abc.abstractmethod
+    def make_run_name(self):
+        ...
+    
+    @abc.abstractmethod
+    def format_data(self, dataset):
+        ...
+
+    @abc.abstractmethod
+    def compile_model(self, optimizer):
+        ...
+
+    @abc.abstractmethod
+    def train(self, callbacks):
+        """
+        call model.fit, return History
+        """
+        ...
+
+    @abc.abstractmethod
+    def get_pipeline(self):
+        """
+        get forward prediction pipeline
+        """
+        ...
+
+    @abc.abstractmethod
+    def save_eigenvals(self):
+        ...
 
 
 def set_seed(seed):
