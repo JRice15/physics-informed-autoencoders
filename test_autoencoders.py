@@ -56,9 +56,8 @@ def get_pipeline(model):
 
 
 # Read Data
-X, Xtest, data_formatter, imshape = data_from_name(args.dataset)
-datashape = X[0].shape
-data = np.concatenate([X, Xtest], axis=0)
+dataset = data_from_name(args.dataset)
+data = np.concatenate([dataset.X, dataset.Xtest], axis=0)
 
 
 def run_name_from_model_path(model_path):
@@ -100,8 +99,7 @@ def run_one_test(model_path, data, num_steps):
             for _ in range(step):
                 x = dynamics(x)
             pred = decoder(x).numpy()
-            pred = pred.reshape(imshape)
-            true = data[:,i+step,:].reshape(imshape)
+            true = data[:,i+step,:]
 
             mse = np.mean((true - pred) ** 2)
             step_mse.append(mse)
@@ -110,11 +108,11 @@ def run_one_test(model_path, data, num_steps):
             step_relpred_err.append(relpred_err)
 
             if (step % 10 == 0 or step in (1,3,5)) and i == 7:
-                write_im(data_formatter(pred), title=str(step) + " steps prediction", 
+                dataset.write_im(pred, title=str(step) + " steps prediction", 
                     filename="pred_step" + str(step), directory="test_results/"+dirname )
                 if not os.path.exists("test_results/truth/truth_step" + str(step) + ".png"):
                     os.makedirs("test_results/truth",exist_ok=True)
-                    write_im(data_formatter(true), title=str(step) + " steps ground truth", 
+                    dataset.write_im(true, title=str(step) + " steps ground truth", 
                         filename="truth_step" + str(step), directory="test_results/truth")
         
         mean_mse = np.mean(step_mse)
@@ -175,7 +173,7 @@ for p in paths:
 
 xrange = list(range(len(mse_avgs[0])))
 
-fullname = "_vs_".join(names) + "." + get_data_name(args.dataset)
+fullname = "_vs_".join(names) + "." + dataset.dataname
 fb_desc = "with 90% confidence interval"
 
 if len(mse_avgs) > 6:
