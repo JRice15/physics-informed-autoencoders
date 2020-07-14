@@ -31,8 +31,7 @@ class CropToTarget(Layer):
         cropy = input_shape[2] - self.target_shape[1]
         if cropx == 0 and cropy == 0:
             self.do_crop = False
-        crop = [[cropx//2, (cropx+1)//2], [cropy//2, (cropy+1)//2]]
-        self.crop =  Cropping2D(crop)
+        self.crop =  Cropping2D([[0,cropx],[0,cropy]])
 
     def call(self, x):
         if self.do_crop:
