@@ -122,7 +122,8 @@ class ConvAutoencoderBlock(Layer, abc.ABC):
 
     def make_conv_layers(self):
         # create number of layers equal to depth
-        filters = [2**i for i in range(self.depth-1, -1, -1)]
+        # filters = [2**i for i in range(self.depth-1, -1, -1)]
+        filters = [1 for i in range(self.depth)]
         for i in range(self.depth-1):
             conv = ConvDilateLayer(name=self.name+str(i), filters=filters[i], 
                 kernel_size=self.kernel_sizes[i], dilation=self.dilations[i], 
