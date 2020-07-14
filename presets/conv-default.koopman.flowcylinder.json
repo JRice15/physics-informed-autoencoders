@@ -8,13 +8,13 @@
   "epochs": 2000,
   "batchsize": 34,
   "strides": [
-    4,
+    2,
     3,
     2
   ],
   "kernel_sizes": [
     5,
-    11,
+    9,
     5
   ],
   "fwd_steps": 8,

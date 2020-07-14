@@ -11,7 +11,7 @@ from keras.layers import (Activation, Add, BatchNormalization, Concatenate,
                           Conv2D, Conv2DTranspose, Cropping2D, Dense, Dropout,
                           GlobalAveragePooling2D, GlobalMaxPooling2D, Lambda,
                           Layer, LeakyReLU, MaxPooling2D, ReLU, Reshape,
-                          Softmax, Subtract, UpSampling2D, ZeroPadding2D, add)
+                          Softmax, Subtract, UpSampling2D, ZeroPadding2D, add, Flatten)
 from keras.models import Model
 
 from src.common import *
@@ -45,16 +45,17 @@ class ConvBlock(Layer):
     Conv layer and Pooling, with optional TanH activation and/or Batchnorm
     """
 
-    def __init__(self, name, kernel_size, stride, weight_decay, activate=True, 
+    def __init__(self, name, filters, kernel_size, stride, weight_decay, activate=True, 
             batchnorm=False, enc=True, **kwargs):
         super().__init__(name=name, **kwargs)
         self.weight_decay = weight_decay
         self.kernel_size = kernel_size
         self.stride = stride
+        self.filters = filters
 
         conv_layer = Conv2D if enc else Conv2DTranspose
         self.conv = conv_layer(
-            filters=1,
+            filters=filters,
             kernel_size=kernel_size,
             strides=stride,
             kernel_initializer=glorot_normal(), # aka Xavier Normal
@@ -65,8 +66,8 @@ class ConvBlock(Layer):
         self.activation = None
         self.batchnorm = None
         if activate:
-            # self.activation = Activation(tanh, name=name+"-tanh")
-            self.activation = LeakyReLU(0.2)
+            self.activation = Activation(tanh, name=name+"-tanh")
+            # self.activation = LeakyReLU(0.2)
         if batchnorm:
             self.batchnorm = BatchNormalization(name=name+"-batchnorm")
     
@@ -81,6 +82,7 @@ class ConvBlock(Layer):
     def get_config(self):
         config = super().get_config()
         config.update({
+            "filters": self.filters,
             "weight_decay": self.weight_decay,
             "kernel_size": self.kernel_size,
             "stride": self.stride,
@@ -109,11 +111,11 @@ class ConvAutoencoderBlock(Layer):
         self.batchnorm_last = batchnorm_last
         self.target_shape = target_shape
 
-        self.block1 = ConvBlock(name+"1", kernel_sizes[0], strides[0], weight_decay, enc=encoder)
-        self.block2 = ConvBlock(name+"2", kernel_sizes[1], strides[1], weight_decay, enc=encoder)
+        self.block1 = ConvBlock(name+"1", 8, kernel_sizes[0], strides[0], weight_decay, enc=encoder)
+        self.block2 = ConvBlock(name+"2", 4, kernel_sizes[1], strides[1], weight_decay, enc=encoder)
         # self.block2b = ConvBlock(name+"2b", kernel_sizes[1], strides[1], weight_decay, enc=encoder)
         # self.block2c = ConvBlock(name+"2c", kernel_sizes[1], strides[1], weight_decay, enc=encoder)
-        self.block3 = ConvBlock(name+"3", kernel_sizes[2], strides[2], weight_decay, enc=encoder,
+        self.block3 = ConvBlock(name+"3", 1, kernel_sizes[2], strides[2], weight_decay, enc=encoder,
             activate=activate_last, batchnorm=batchnorm_last)
 
     def call(self, x):
