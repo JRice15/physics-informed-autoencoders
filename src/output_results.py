@@ -31,8 +31,10 @@ class ImgWriter(Callback):
         self.dir = "train_results/" + run_name
         self.run_name = run_name
         self.dataset = dataset
-        self.X = tf.reshape(dataset.Xtest[dataset.write_index], (1, -1))
-        self.Y = tf.reshape(dataset.Xtest[dataset.write_index+1], (-1, 1))
+        X = tf.convert_to_tensor(dataset.Xtest[dataset.write_index])
+        Y = tf.convert_to_tensor(dataset.Xtest[dataset.write_index+1])
+        self.X = tf.reshape(X, (1,)+X.shape)
+        self.Y = tf.reshape(Y, (1,)+Y.shape)
 
         self.dataset.write_im(K.eval(self.X), title="Input Y(t)", 
             filename="input."+dataset.dataname, directory="train_results")
