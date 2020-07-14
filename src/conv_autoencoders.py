@@ -110,6 +110,8 @@ class ConvAutoencoderBlock(Layer):
 
         self.block1 = ConvBlock(name+"1", kernel_sizes[0], strides[0], weight_decay, enc=encoder)
         self.block2 = ConvBlock(name+"2", kernel_sizes[1], strides[1], weight_decay, enc=encoder)
+        self.block2b = ConvBlock(name+"2b", kernel_sizes[1], strides[1], weight_decay, enc=encoder)
+        self.block2c = ConvBlock(name+"2c", kernel_sizes[1], strides[1], weight_decay, enc=encoder)
         self.block3 = ConvBlock(name+"3", kernel_sizes[2], strides[2], weight_decay, enc=encoder,
             activate=activate_last, batchnorm=batchnorm_last)
 
@@ -121,6 +123,8 @@ class ConvAutoencoderBlock(Layer):
             x = ZeroPadding2D([[0,1],[0,1]])(x)
         x = self.block1(x)
         x = self.block2(x)
+        x = self.block2b(x)
+        x = self.block2c(x)
         x = self.block3(x)
         if not self.is_encoder:
             # get rid of any extra rows/cols in as even a way possible
