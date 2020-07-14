@@ -166,6 +166,8 @@ class LyapunovAutoencoder(BaseAE):
     def make_run_name(self):
         args = self.args
         run_name = args.name + ".lyap."
+        if args.convolutional:
+            run_name += "conv."
         if args.no_stability:
             run_name += "nostabl."
         else:

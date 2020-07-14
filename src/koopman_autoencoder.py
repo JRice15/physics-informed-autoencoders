@@ -128,10 +128,10 @@ class KoopmanAutoencoder(BaseAE):
     
     def build_enc_dec(self, args, input_shape):
         if args.convolutional:
-            self.encoder = ConvAutoencoderBlock(args.pool_sizes, args.kernel_sizes, 
+            self.encoder = ConvAutoencoderBlock(args.strides, args.kernel_sizes, 
                 args.wd, encoder=True, name="encoder")
-            self.decoder = ConvAutoencoderBlock(args.pool_sizes[::-1], args.kernel_sizes, 
-                args.wd, encoder=False, name="encoder")
+            self.decoder = ConvAutoencoderBlock(args.strides[::-1], args.kernel_sizes[::-1], # reverse order of kernels, strides
+                args.wd, encoder=False, target_shape=input_shape, name="decoder")
         else:
             intermediate, bottleneck = args.sizes
             self.encoder = DenseAutoencoderBlock((intermediate, intermediate, bottleneck), 
@@ -202,11 +202,10 @@ class KoopmanAutoencoder(BaseAE):
             self.model.add_metric(bwd_loss, name="bwd_loss", aggregation="mean")
 
         # Encoder-Decoder Identity
-        id_loss = id_wt * inverse_reg(current, encoder, decoder)
+        id_loss = id_wt * inverse_reg(current, self.encoder, self.decoder)
         self.model.add_loss(id_loss)
         self.model.add_metric(id_loss, name="id_loss", aggregation="mean")
-
-        # self.model.summary()
+        self.model.summary()
 
 
     def compile_model(self, optimizer):
@@ -215,6 +214,8 @@ class KoopmanAutoencoder(BaseAE):
     def make_run_name(self):
         args = self.args
         run_name = args.name + ".koop."
+        if args.convolutional:
+            run_name += "conv."
         run_name += "{}fs{}bs.".format(args.fwd_steps, args.bwd_steps)
         run_name += "f{}_b{}_i{}_c{}.".format(args.forward, args.backward, args.identity, args.consistency)
         run_name += self.run_name_common_suffix()
@@ -230,7 +231,6 @@ class KoopmanAutoencoder(BaseAE):
         return np.array(out)
 
     def format_data(self):
-        print("fmt data X shape:", self.dataset.X.shape)
         self.X = self.data_formatter(
             self.dataset.X, self.args.bwd_steps, self.args.fwd_steps)
         valX = self.data_formatter(

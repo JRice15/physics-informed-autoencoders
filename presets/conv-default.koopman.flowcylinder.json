@@ -1,0 +1,28 @@
+{
+  "name": "orig-paper-cylinder",
+  "dataset": "flow_cylinder",
+  "convolutional": true,
+  "lr": 0.01,
+  "wd": 0.0,
+  "gradclip": 0.5,
+  "epochs": 2000,
+  "batchsize": 34,
+  "strides": [
+    4,
+    3,
+    2
+  ],
+  "kernel_sizes": [
+    5,
+    11,
+    5
+  ],
+  "fwd_steps": 8,
+  "bwd_steps": 8,
+  "identity": 0.01,
+  "forward": 1,
+  "backward": 0.1,
+  "consistency": 0.01,
+  "save": false,
+  "load": true
+}

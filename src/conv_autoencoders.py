@@ -24,15 +24,21 @@ class CropToTarget(Layer):
     def __init__(self, target_shape):
         super().__init__()
         self.target_shape = target_shape
+        self.do_crop = True
     
     def build(self, input_shape):
         cropx = input_shape[1] - self.target_shape[0]
         cropy = input_shape[2] - self.target_shape[1]
+        if cropx == 0 and cropy == 0:
+            self.do_crop = False
         crop = [[cropx//2, (cropx+1)//2], [cropy//2, (cropy+1)//2]]
         self.crop =  Cropping2D(crop)
 
     def call(self, x):
-        return self.crop(x)
+        if self.do_crop:
+            return self.crop(x)
+        else:
+            return x
 
 
 class ConvBlock(Layer):
@@ -87,16 +93,21 @@ class ConvBlock(Layer):
 class ConvAutoencoderBlock(Layer):
     """
     block of 3 conv layers, either for encoder or decoder
+    Args:
+        encoder (bool): whether this is an encoder (ie, false for decoder)
+        target_shape: only required for decoder, to get proper output shape
     """
 
     def __init__(self, strides, kernel_sizes, weight_decay, name, activate_last=False, 
-            batchnorm_last=False, encoder=True, **kwargs):
+            batchnorm_last=False, encoder=True, target_shape=None, **kwargs):
         super().__init__(name=name, **kwargs)
+        self.is_encoder = encoder
         self.strides = strides
         self.kernel_sizes = kernel_sizes
         self.weight_decay = weight_decay
         self.activate_last = activate_last
         self.batchnorm_last = batchnorm_last
+        self.target_shape = target_shape
 
         self.block1 = ConvBlock(name+"1", kernel_sizes[0], strides[0], weight_decay, enc=encoder)
         self.block2 = ConvBlock(name+"2", kernel_sizes[1], strides[1], weight_decay, enc=encoder)
@@ -104,15 +115,26 @@ class ConvAutoencoderBlock(Layer):
             activate=activate_last, batchnorm=batchnorm_last)
 
     def call(self, x):
+        x = AddChannels()(x)
+        if not self.is_encoder:
+            # add 1 row and column so that we end up with shape larger than or 
+            # equal to the target
+            x = ZeroPadding2D([[0,1],[0,1]])(x)
         x = self.block1(x)
         x = self.block2(x)
         x = self.block3(x)
+        if not self.is_encoder:
+            # get rid of any extra rows/cols in as even a way possible
+            x = CropToTarget(self.target_shape)(x)
+        x = RemoveChannels()(x)
         return x
 
     def get_config(self):
         config = super().get_config()
         config.update({
+            "encoder": self.is_encoder,
             "strides": self.strides,
+            "target_shape": self.target_shape,
             "kernel_sizes": self.kernel_sizes,
             "weight_decay": self.weight_decay,
             "activate_last": self.activate_last,

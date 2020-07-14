@@ -29,7 +29,6 @@ class FullyConnectedBlock(Layer):
         super().__init__(name=name, **kwargs)
         self.output_dims = output_dims
         self.weight_decay = weight_decay
-        self.conv = conv
 
         self.dense = Dense(output_dims,
             kernel_initializer=glorot_normal(), # aka Xavier Normal
@@ -75,7 +74,6 @@ class DenseAutoencoderBlock(Layer):
         self.weight_decay = weight_decay
         self.activate_last = activate_last
         self.batchnorm_last = batchnorm_last
-        self.conv = conv
 
         self.block1 = FullyConnectedBlock(name+"1", sizes[0], weight_decay)
         self.block2 = FullyConnectedBlock(name+"2", sizes[1], weight_decay)

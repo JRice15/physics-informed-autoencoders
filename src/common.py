@@ -17,10 +17,11 @@ class AddChannels(Layer):
         super().__init__()
 
     def build(self, input_shape):
-        self.reshape = Reshape(input_shape + (1,))
+        # remove batch size, add channels for shape
+        self.reshape = Reshape(input_shape[1:] + (1,))
 
     def call(self, x):
-        self.reshape(x)
+        return self.reshape(x)
 
 class RemoveChannels(Layer):
 
@@ -28,10 +29,11 @@ class RemoveChannels(Layer):
         super().__init__()
 
     def build(self, input_shape):
-        self.reshape = Reshape(input_shape[:-1])
+        # shape with no batch size, and remove channels
+        self.reshape = Reshape(input_shape[1:-1])
 
     def call(self, x):
-        self.reshape(x)
+        return self.reshape(x)
 
 CUSTOM_OBJ_DICT = {
     "AddChannels": AddChannels,
@@ -51,7 +53,11 @@ class BaseAE(abc.ABC):
         args = self.args
         run_name = self.dataset.dataname + "."
         run_name += "{}ep_{}bs_{}lr_{}wd_{}gc.".format(args.epochs, args.batchsize, args.lr, args.wd, args.gradclip)
-        run_name += "s" + "_".join([str(i) for i in args.sizes])
+        if args.convolutional:
+            run_name += "k" + "_".join([str(i) for i in args.kernel_sizes])
+            run_name += ".s" + "_".join([str(i) for i in args.strides])
+        else:
+            run_name += "s" + "_".join([str(i) for i in args.sizes])
         run_name += ".{}".format(args.seed)
         return run_name
 

@@ -49,6 +49,7 @@ if model_type == "lyapunov":
 elif model_type == "koopman":
     num_sizes = 2
 
+print(args)
 
 # Read Data
 dataset = data_from_name(args.dataset, (not args.convolutional))
@@ -84,10 +85,10 @@ parser.add_argument("--epochs",type=int,default=defaults["epochs"])
 parser.add_argument("--batchsize",type=int,default=defaults["batchsize"])
 
 if args.convolutional:
-    parser.add_argument("--sizes",type=int,default=defaults["sizes"],nargs=num_sizes,help="encoder layer output widths in decreasing order of size")
+    parser.add_argument("--strides",type=int,default=defaults["strides"],nargs=3,help="3 encoder layer conv strides in order")
+    parser.add_argument("--kernel-sizes",type=int,default=defaults["kernel_sizes"],nargs=3,help="3 encoder layer kernel sizes in order")
 else:
-    parser.add_argument("--pool-sizes",type=int,default=defaults["pool_sizes"],nargs=3,help="encoder layer pool sizes (must be tuned to fit dataset dimensions")
-    parser.add_argument("--kernel-sizes",type=int,default=defaults["kernel_sizes"],nargs=3,help="encoder layer output widths in decreasing order of size")
+    parser.add_argument("--sizes",type=int,default=defaults["sizes"],nargs=num_sizes,help="encoder layer output widths in decreasing order of size")
 
 if model_type == "lyapunov":
     parser.add_argument("--lambd",type=float,default=defaults["lambd"],help="inverse regularizer weight")
