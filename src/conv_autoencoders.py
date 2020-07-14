@@ -77,17 +77,17 @@ class ConvDilateLayer(Layer):
             self.dilation_layer = UpSampling2D(round(1/dilation))
     
     def call(self, x):
-        x = self.conv(x)
         # dilation is split up so as to reduce computation when possible, and skip the 
         # layer when dilation == 1
+        if self.dilation < 1:
+            x = self.dilation_layer(x)
+        x = self.conv(x)
         if self.dilation > 1:
             x = self.dilation_layer(x)
         if self.activation is not None:
             x = self.activation(x)
         if self.batchnorm is not None:
             x = self.batchnorm(x)
-        if self.dilation < 1:
-            x = self.dilation_layer(x)
         return x
     
     def get_config(self):
