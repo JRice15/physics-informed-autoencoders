@@ -130,8 +130,10 @@ class KoopmanAutoencoder(BaseAE):
         if args.convolutional:
             self.encoder = ConvAutoencoderBlock(args.strides, args.kernel_sizes, 
                 args.wd, encoder=True, name="encoder")
+            _ = self.encoder(Input(input_shape))
+            preflat_shape = self.encoder.preflat_shape
             self.decoder = ConvAutoencoderBlock(args.strides[::-1], args.kernel_sizes[::-1], # reverse order of kernels, strides
-                args.wd, encoder=False, target_shape=input_shape, name="decoder")
+                args.wd, encoder=False, preflat_shape=preflat_shape, target_shape=input_shape, name="decoder")
         else:
             intermediate, bottleneck = args.sizes
             self.encoder = DenseAutoencoderBlock((intermediate, intermediate, bottleneck), 

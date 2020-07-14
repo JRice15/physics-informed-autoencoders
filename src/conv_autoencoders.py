@@ -101,7 +101,7 @@ class ConvAutoencoderBlock(Layer):
     """
 
     def __init__(self, strides, kernel_sizes, weight_decay, name, activate_last=False, 
-            batchnorm_last=False, encoder=True, target_shape=None, **kwargs):
+            batchnorm_last=False, encoder=True, target_shape=None, preflat_shape=None, **kwargs):
         super().__init__(name=name, **kwargs)
         self.is_encoder = encoder
         self.strides = strides
@@ -110,6 +110,7 @@ class ConvAutoencoderBlock(Layer):
         self.activate_last = activate_last
         self.batchnorm_last = batchnorm_last
         self.target_shape = target_shape
+        self.preflat_shape = preflat_shape
 
         self.block1 = ConvBlock(name+"1", 8, kernel_sizes[0], strides[0], weight_decay, enc=encoder)
         self.block2 = ConvBlock(name+"2", 4, kernel_sizes[1], strides[1], weight_decay, enc=encoder)
@@ -118,12 +119,14 @@ class ConvAutoencoderBlock(Layer):
         self.block3 = ConvBlock(name+"3", 1, kernel_sizes[2], strides[2], weight_decay, enc=encoder,
             activate=activate_last, batchnorm=batchnorm_last)
 
-    def call(self, x):
-        x = AddChannels()(x)
+    def call(self, x, withshape=False):
         if not self.is_encoder:
             # add 1 row and column so that we end up with shape larger than or 
             # equal to the target
+            x = Reshape(self.preflat_shape)(x)
             x = ZeroPadding2D([[0,1],[0,1]])(x)
+        else:
+            x = AddChannels()(x)
         x = self.block1(x)
         x = self.block2(x)
         # x = self.block2b(x)
@@ -132,7 +135,10 @@ class ConvAutoencoderBlock(Layer):
         if not self.is_encoder:
             # get rid of any extra rows/cols in as even a way possible
             x = CropToTarget(self.target_shape)(x)
-        x = RemoveChannels()(x)
+            x = RemoveChannels()(x)
+        else:
+            self.preflat_shape = x.shape[1:]
+            x = Flatten()(x)
         return x
 
     def get_config(self):
