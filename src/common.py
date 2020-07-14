@@ -1,15 +1,21 @@
+import abc
 import math
 import sys
-import abc
 
 import keras.backend as K
 import numpy as np
 import tensorflow as tf
-from keras.activations import tanh
-from keras.initializers import glorot_normal, zeros
-from keras.models import Model
 from keras import Input
-from keras.layers import Layer, Dense, Reshape
+from keras import activations
+from keras.initializers import glorot_normal, zeros
+from keras.layers import (Activation, Add, BatchNormalization, Concatenate,
+                          Conv2D, Conv2DTranspose, Cropping2D, Dense, Dropout,
+                          Flatten, GlobalAveragePooling2D, GlobalMaxPooling2D,
+                          Lambda, Layer, LeakyReLU, MaxPooling2D, ReLU,
+                          Reshape, Softmax, Subtract, UpSampling2D,
+                          ZeroPadding2D, add)
+from keras.models import Model
+
 
 class AddChannels(Layer):
 
@@ -55,7 +61,7 @@ class BaseAE(abc.ABC):
         run_name += "{}ep_{}bs_{}lr_{}wd_{}gc.".format(args.epochs, args.batchsize, args.lr, args.wd, args.gradclip)
         if args.convolutional:
             run_name += "k" + "_".join([str(i) for i in args.kernel_sizes])
-            run_name += ".s" + "_".join([str(i) for i in args.strides])
+            run_name += ".s" + "_".join([str(i) for i in args.dilations])
         else:
             run_name += "s" + "_".join([str(i) for i in args.sizes])
         run_name += ".{}".format(args.seed)
@@ -105,6 +111,23 @@ def set_seed(seed):
     tf.random.set_seed(seed)
 
 
+def get_activation(act_name, name):
+    act_name = act_name.lower().strip()
+    if act_name == "tanh":
+        return Activation(activations.tanh, name=name)
+    if act_name == "relu":
+        return Activation(activations.relu, name=name)
+    if act_name in ("lrelu", "leakyrelu"):
+        return LeakyReLU(0.2, name=name)
+    if act_name in ("sig", "sigmoid"):
+        return Activation(activations.sigmoid, name=name)
+    if act_name == "softplus":
+        return Activation(activations.softplus, name=name)
+    
+    raise ValueError("Bad activation name '{}'".format(act_name))
+
+
+
 def inverse_reg(x, encoder, decoder):
     """
     regularizer to enforce that the decoder is the inverse of the encoder. 
@@ -119,6 +142,3 @@ def inverse_reg(x, encoder, decoder):
     x_pred = decoder(encoder(x))
     norm = tf.reduce_mean(tf.square(x - x_pred))
     return norm
-
-
-

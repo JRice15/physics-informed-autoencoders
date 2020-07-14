@@ -40,33 +40,39 @@ def make_dirs(dirname):
 parser = argparse.ArgumentParser(description="Select model first")
 parser.add_argument("--model",required=True,choices=["koopman","lyapunov"],help="name of the model to use")
 parser.add_argument("--dataset",type=str,default="flow_cylinder",help="name of dataset")
-parser.add_argument("--convolutional",action="store_true",default=False,help="create a convolutional version of the model")
+parser.add_argument("--convolutional",action="store_true",default=False,help="create a convolutional model")
+
 args, unknown = parser.parse_known_args()
 
 model_type = args.model
-if model_type == "lyapunov":
-    num_sizes = 3
-elif model_type == "koopman":
-    num_sizes = 2
-
-print(args)
 
 # Read Data
 dataset = data_from_name(args.dataset, (not args.convolutional))
 
+# Load defaults
 if args.convolutional:
     defaults_file = "presets/conv-default.{}.{}.json".format(model_type, 
         dataset.__class__.__name__.lower())
 else:
     defaults_file = "presets/orig-paper.{}.{}.json".format(model_type, 
         dataset.__class__.__name__.lower())
-
 try:
     with open(defaults_file, "r") as f:
         defaults = json.load(f)
 except FileNotFoundError:
     raise FileNotFoundError("Defaults file for this model and dataset configuration could not be found. Create "
         "a file '{}' with the desired presets".format(defaults_file))
+
+if args.convolutional:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--depth",type=int,default=defaults["depth"],help="depth of convolutional network")
+    depth_args, unknown = parser.parse_known_args()
+    num_sizes = depth_args.depth
+else:
+    if model_type == "lyapunov":
+        num_sizes = 3
+    elif model_type == "koopman":
+        num_sizes = 2
 
 # Parse Full Args
 parser = argparse.ArgumentParser(description="see Erichson et al's 'PHYSICS-INFORMED "
@@ -85,8 +91,9 @@ parser.add_argument("--epochs",type=int,default=defaults["epochs"])
 parser.add_argument("--batchsize",type=int,default=defaults["batchsize"])
 
 if args.convolutional:
-    parser.add_argument("--strides",type=int,default=defaults["strides"],nargs=3,help="3 encoder layer conv strides in order")
-    parser.add_argument("--kernel-sizes",type=int,default=defaults["kernel_sizes"],nargs=3,help="3 encoder layer kernel sizes in order")
+    parser.add_argument("--depth",type=int,default=defaults["depth"],help="depth of convolutional network")
+    parser.add_argument("--dilations",type=int,default=defaults["dilations"],nargs=num_sizes,help="encoder layer conv dilations in order")
+    parser.add_argument("--kernel-sizes",type=int,default=defaults["kernel_sizes"],nargs=num_sizes,help="encoder layer kernel sizes in order")
 else:
     parser.add_argument("--sizes",type=int,default=defaults["sizes"],nargs=num_sizes,help="encoder layer output widths in decreasing order of size")
 

@@ -7,15 +7,18 @@
   "gradclip": 0.5,
   "epochs": 2000,
   "batchsize": 34,
-  "strides": [
+  "depth": 4,
+  "dilations": [
     2,
-    3,
+    2,
+    2,
     2
   ],
   "kernel_sizes": [
-    5,
+    3,
+    7,
     9,
-    5
+    3
   ],
   "fwd_steps": 8,
   "bwd_steps": 8,
