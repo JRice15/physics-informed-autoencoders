@@ -170,7 +170,7 @@ model_path = "models/model." + run_name + ".hdf5"
 callbacks = [
     LearningRateScheduler(lr_schedule(args)),
     ModelCheckpoint(model_path, save_best_only=True, save_weights_only=False, 
-        verbose=1, period=20),
+        verbose=1, period=min(20, args.epochs//5)),
     ImgWriter(pipeline=autoencoder.get_pipeline(), run_name=run_name, 
         dataset=dataset, freq=args.epochs//5),
 ]

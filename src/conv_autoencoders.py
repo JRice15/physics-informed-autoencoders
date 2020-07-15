@@ -144,6 +144,7 @@ class ConvAutoencoderBlock(Layer, abc.ABC):
             "depth": self.depth,
             "dilations": self.dilations,
             "kernel_sizes": self.kernel_sizes,
+            "filters": self.filters,
             "weight_decay": self.weight_decay,
             "activate_last": self.activate_last,
             "batchnorm_last": self.batchnorm_last,
@@ -162,8 +163,8 @@ class ConvEncoder(ConvAutoencoderBlock):
     """
 
     def __init__(self, depth, dilations, kernel_sizes, filters, weight_decay, conv_dynamics, activate_last=False, 
-            batchnorm_last=False, **kwargs):
-        super().__init__(name="encoder", depth=depth, dilations=dilations, kernel_sizes=kernel_sizes, 
+            batchnorm_last=False, name="encoder", **kwargs):
+        super().__init__(name=name, depth=depth, dilations=dilations, kernel_sizes=kernel_sizes, 
             weight_decay=weight_decay, activate_last=activate_last, batchnorm_last=batchnorm_last, 
             conv_dynamics=conv_dynamics, filters=filters, **kwargs)
 
@@ -193,8 +194,8 @@ class ConvDecoder(ConvAutoencoderBlock):
     """
 
     def __init__(self, depth, dilations, kernel_sizes, filters, weight_decay, conv_dynamics, activate_last=False, 
-            batchnorm_last=False, target_shape=None, encoded_shape=None, **kwargs):
-        super().__init__(name="decoder", depth=depth, dilations=dilations, kernel_sizes=kernel_sizes, 
+            batchnorm_last=False, target_shape=None, encoded_shape=None, name="decoder", **kwargs):
+        super().__init__(name=name, depth=depth, dilations=dilations, kernel_sizes=kernel_sizes, 
             weight_decay=weight_decay, activate_last=activate_last, batchnorm_last=batchnorm_last, 
             conv_dynamics=conv_dynamics, filters=filters, **kwargs)
 
@@ -220,6 +221,14 @@ class ConvDecoder(ConvAutoencoderBlock):
         x = RemoveChannels()(x)
 
         return x
+    
+    def get_config(self):
+        config = super().get_config()
+        config.update({
+            "target_shape": self.target_shape,
+            "encoded_shape": self.encoded_shape,
+        })
+        return config
 
 
 

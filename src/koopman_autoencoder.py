@@ -309,6 +309,8 @@ class KoopmanAutoencoder(BaseAE):
 
 
 CUSTOM_OBJ_DICT.update({
-    "KoopmanConsistencyLayer": KoopmanConsistencyLayer
+    "KoopmanConsistencyLayer": KoopmanConsistencyLayer,
+    "DynamicsInitializer": DynamicsInitializer,
+    "InverseDynamicsInitializer": InverseDynamicsInitializer,
 })
 

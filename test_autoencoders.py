@@ -31,6 +31,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--dataset",required=True,help="name of the dataset to use")
 parser.add_argument("--pred-steps",type=int,default=50,help="number of timesteps to predict")
 parser.add_argument("--file",default=None,help="file with weights paths to compare. Each line should be: '<name><tab-character><weights path>'")
+parser.add_argument("--convolutional",action="store_true",default=False,help="whether to test convolutional models")
 parser.add_argument("--seed",type=int,default=0)
 
 args = parser.parse_args()
@@ -58,7 +59,7 @@ def get_pipeline(model):
 
 
 # Read Data
-dataset = data_from_name(args.dataset)
+dataset = data_from_name(args.dataset, (not args.convolutional))
 data = np.concatenate([dataset.X, dataset.Xtest], axis=0)
 
 
