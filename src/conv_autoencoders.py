@@ -110,13 +110,14 @@ class ConvAutoencoderBlock(Layer, abc.ABC):
     base class for encoder and decoder conv layers
     """
 
-    def __init__(self, depth, dilations, kernel_sizes, weight_decay, name, conv_dynamics, 
+    def __init__(self, depth, dilations, kernel_sizes, filters, weight_decay, name, conv_dynamics, 
             activate_last=False, batchnorm_last=False, **kwargs):
         super().__init__(name=name, **kwargs)
         assert len(kernel_sizes) == len(dilations) == depth
         self.depth = depth
         self.dilations = dilations
         self.kernel_sizes = kernel_sizes
+        self.filters = filters
         self.weight_decay = weight_decay
         self.activate_last = activate_last
         self.batchnorm_last = batchnorm_last
@@ -124,9 +125,8 @@ class ConvAutoencoderBlock(Layer, abc.ABC):
 
     def make_conv_layers(self):
         # create first depth-1 layers dynamically
-        # filters = [2**i for i in range(self.depth-1, -1, -1)]
         for i in range(self.depth-1):
-            conv = ConvDilateLayer(name=self.name+str(i), filters=1, 
+            conv = ConvDilateLayer(name=self.name+str(i), filters=self.filters[i], 
                 kernel_size=self.kernel_sizes[i], dilation=self.dilations[i], 
                 weight_decay=self.weight_decay)
             setattr(self, "block"+str(i), conv)
@@ -161,11 +161,11 @@ class ConvEncoder(ConvAutoencoderBlock):
     variable depth convolutional encoder
     """
 
-    def __init__(self, depth, dilations, kernel_sizes, weight_decay, conv_dynamics, activate_last=False, 
+    def __init__(self, depth, dilations, kernel_sizes, filters, weight_decay, conv_dynamics, activate_last=False, 
             batchnorm_last=False, **kwargs):
         super().__init__(name="encoder", depth=depth, dilations=dilations, kernel_sizes=kernel_sizes, 
             weight_decay=weight_decay, activate_last=activate_last, batchnorm_last=batchnorm_last, 
-            conv_dynamics=conv_dynamics, **kwargs)
+            conv_dynamics=conv_dynamics, filters=filters, **kwargs)
 
         self.encoded_shape = None # computed during call
         self.make_conv_layers()
@@ -192,11 +192,11 @@ class ConvDecoder(ConvAutoencoderBlock):
     variable depth convolutional decoder
     """
 
-    def __init__(self, depth, dilations, kernel_sizes, weight_decay, conv_dynamics, activate_last=False, 
+    def __init__(self, depth, dilations, kernel_sizes, filters, weight_decay, conv_dynamics, activate_last=False, 
             batchnorm_last=False, target_shape=None, encoded_shape=None, **kwargs):
         super().__init__(name="decoder", depth=depth, dilations=dilations, kernel_sizes=kernel_sizes, 
             weight_decay=weight_decay, activate_last=activate_last, batchnorm_last=batchnorm_last, 
-            conv_dynamics=conv_dynamics, **kwargs)
+            conv_dynamics=conv_dynamics, filters=filters, **kwargs)
 
         self.target_shape = target_shape
         self.encoded_shape = encoded_shape

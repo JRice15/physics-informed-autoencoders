@@ -90,11 +90,13 @@ parser.add_argument("--gradclip",type=float,default=defaults["gradclip"],help="g
 parser.add_argument("--seed",type=int,default=0,help="random seed")
 parser.add_argument("--epochs",type=int,default=defaults["epochs"])
 parser.add_argument("--batchsize",type=int,default=defaults["batchsize"])
+parser.add_argument("--tboard",action="store_true",default=False,help="run tensorboard")
 
 if args.convolutional:
     parser.add_argument("--depth",type=int,default=defaults["depth"],help="depth of convolutional network")
     parser.add_argument("--dilations",type=int,default=defaults["dilations"],nargs=num_sizes,help="encoder layer conv dilations in order")
     parser.add_argument("--kernel-sizes",type=int,default=defaults["kernel_sizes"],nargs=num_sizes,help="encoder layer kernel sizes in order")
+    parser.add_argument("--filters",type=int,default=defaults["filters"],nargs=num_sizes-1,help="encoder layer filters in order, except last (which is always 1)")
 else:
     parser.add_argument("--sizes",type=int,default=defaults["sizes"],nargs=num_sizes,help="encoder layer output widths in decreasing order of size")
 
@@ -169,11 +171,12 @@ callbacks = [
     LearningRateScheduler(lr_schedule(args)),
     ModelCheckpoint(model_path, save_best_only=True, save_weights_only=False, 
         verbose=1, period=20),
-    TensorBoard(histogram_freq=100, write_graph=False, write_images=True, 
-        update_freq=(args.batchsize * 20), embeddings_freq=100),
     ImgWriter(pipeline=autoencoder.get_pipeline(), run_name=run_name, 
         dataset=dataset, freq=args.epochs//5),
 ]
+if args.tboard:
+    callbacks.append(TensorBoard(histogram_freq=100, write_graph=False, write_images=True, 
+        update_freq=(args.batchsize * 20), embeddings_freq=100))
 
 gradclip = None if args.gradclip == 0 else args.gradclip
 optimizer = Adam(
