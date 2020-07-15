@@ -150,9 +150,11 @@ def lr_schedule(args):
     reduce lr by 0.6 every (args.epochs // 5) epochs
     """
     def scheduler(epoch):
-        exp = epoch // (args.epochs // 5)
+        if epoch < 50:
+            return args.lr            
+        exp = epoch // (args.epochs // 5) + 1
         new_rate = args.lr * (0.4 ** exp)
-        if epoch % (args.epochs // 5) == 0:
+        if epoch % (args.epochs // 5) == 0 or (epoch == 50):
             print("LearningRateScheduler setting learning rate to {}".format(new_rate))
         return new_rate
     return scheduler
