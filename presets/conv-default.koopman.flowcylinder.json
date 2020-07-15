@@ -2,23 +2,26 @@
   "name": "orig-paper-cylinder",
   "dataset": "flow_cylinder",
   "convolutional": true,
+  "conv-dynamics": true,
   "lr": 0.01,
   "wd": 0.0,
   "gradclip": 0.5,
   "epochs": 2000,
   "batchsize": 34,
-  "depth": 4,
+  "depth": 5,
   "dilations": [
+    1,
     2,
     2,
     2,
     2
   ],
   "kernel_sizes": [
-    3,
-    7,
-    9,
-    3
+    5,
+    5,
+    5,
+    5,
+    5
   ],
   "fwd_steps": 8,
   "bwd_steps": 8,

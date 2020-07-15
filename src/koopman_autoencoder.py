@@ -185,6 +185,7 @@ class KoopmanAutoencoder(BaseAE):
         print("Autoencoder Input shape:", inpt.shape, "current shape:", current.shape)
 
         inshape = self.encoder(current).shape[1:] # remove batch size
+        print("\n\ndynamics shape:", self.encoder.encoded_shape, inshape, "\n")
         if conv_dynamics:
             self.forward = Conv2D(1, 9, padding="same", use_bias=False, name="forward-dynamics-conv",
                 kernel_initializer=glorot_normal(), kernel_regularizer=regularizers.l2(weight_decay))
@@ -235,7 +236,7 @@ class KoopmanAutoencoder(BaseAE):
         id_loss = id_wt * inverse_reg(current, self.encoder, self.decoder)
         self.model.add_loss(id_loss)
         self.model.add_metric(id_loss, name="id_loss", aggregation="mean")
-        self.model.summary()
+        # self.model.summary()
 
 
     def compile_model(self, optimizer):
