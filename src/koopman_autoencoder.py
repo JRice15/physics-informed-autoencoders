@@ -2,7 +2,7 @@ import keras.backend as K
 import numpy as np
 import tensorflow as tf
 from keras import Input
-from keras.initializers import glorot_normal, zeros, Initializer
+from keras.initializers import glorot_normal, zeros, Initializer, RandomNormal
 from keras.layers import (Activation, Add, BatchNormalization, Concatenate,
                           Conv2D, Cropping2D, Dense, Dropout,
                           GlobalAveragePooling2D, GlobalMaxPooling2D,
@@ -17,6 +17,20 @@ from src.common import *
 from src.dense_autoencoders import *
 from src.conv_autoencoders import *
 from src.output_results import *
+
+
+class DynamicsInitializer(Initializer):
+
+    def __init__(self, init_scale=0.99):
+        self.scale = init_scale
+    
+    def __call__(self, shape, dtype=None):
+        weight = RandomNormal(0, 1)(shape, dtype)
+        U, S, V = np.linalg.svd(weight)
+        return np.matmul(U, V.T) * self.scale
+    
+    def get_config(self):
+        return {"init_scale": self.scale}
 
 
 class InverseDynamicsInitializer(Initializer):
@@ -188,10 +202,10 @@ class KoopmanAutoencoder(BaseAE):
         print("\n\ndynamics shape:", self.encoder.encoded_shape, inshape, "\n")
         if conv_dynamics:
             self.forward = Conv2D(1, 9, padding="same", use_bias=False, name="forward-dynamics-conv",
-                kernel_initializer=glorot_normal(), kernel_regularizer=regularizers.l2(weight_decay))
+                kernel_initializer=DynamicsInitializer(), kernel_regularizer=regularizers.l2(weight_decay))
         else:
             self.forward = Dense(inshape[-1], use_bias=False, name="forward-dynamics-dense",
-                kernel_initializer=glorot_normal(), kernel_regularizer=regularizers.l2(weight_decay))
+                kernel_initializer=DynamicsInitializer(), kernel_regularizer=regularizers.l2(weight_decay))
         
         if self.has_bwd:
             self.backward = KoopmanConsistencyLayer(conv_dynamics=conv_dynamics, 
