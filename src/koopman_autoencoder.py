@@ -199,7 +199,7 @@ class KoopmanAutoencoder(BaseAE):
         print("Autoencoder Input shape:", inpt.shape, "current shape:", current.shape)
 
         inshape = self.encoder(current).shape[1:] # remove batch size
-        print("\n\ndynamics shape:", self.encoder.encoded_shape, inshape, "\n")
+        print("\n\ndynamics shape:", inshape)
         if conv_dynamics:
             self.forward = Conv2D(1, 9, padding="same", use_bias=False, name="forward-dynamics-conv",
                 kernel_initializer=DynamicsInitializer(), kernel_regularizer=regularizers.l2(weight_decay))
