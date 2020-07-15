@@ -24,45 +24,55 @@ class InverseDynamicsInitializer(Initializer):
     initialize a layers weights to be the (pseudo-)inverse of another layer's
     """
 
-    def __init__(self, in_shape, pair_layer):
+    def __init__(self, in_shape, pair_layer, conv_dynamics=False):
         self.in_shape = in_shape
         # build pair layer
         _ = pair_layer(Input(in_shape))
         self.pair_layer = pair_layer
+        self.conv_dynamics = conv_dynamics
     
     def __call__(self, shape, dtype=None):
         pair_weights = self.pair_layer.weights[0]
         assert pair_weights.shape == shape
-        return tf.linalg.pinv(tf.transpose(pair_weights))
+        perm = [i for i in range(len(shape))]
+        perm[0] = 1
+        perm[1] = 0
+        inv_weights = tf.linalg.pinv(tf.transpose(pair_weights, perm=perm))
+        return inv_weights
 
     def get_config(self):
         return {
             "pair_layer": self.pair_layer,
-            "in_shape": self.in_shape
+            "in_shape": self.in_shape,
+            "conv_dynamics": self.conv_dynamics,
         }
 
 
-class KoopmanConsistencyLayer(Dense):
+class KoopmanConsistencyLayer(Layer):
     """
     enforce consistency of forward-backward predictions
     """
 
-    def __init__(self, in_shape, pair_layer, cons_wt, units, name, weight_decay, 
-            use_bias=False, *args, **kwargs):
+    def __init__(self, conv_dynamics, in_shape, pair_layer, cons_wt, units, name, weight_decay, 
+            use_bias=False, **kwargs):
+        super().__init__(name=name)
+        self.conv_dynamics = conv_dynamics
+        self.units = units
         self.in_shape = in_shape
         self.pair_layer = pair_layer
         self.cons_wt = cons_wt
         self.weight_decay = weight_decay
-        kwargs["kernel_initializer"] = InverseDynamicsInitializer(in_shape, pair_layer)
+
+        kwargs["kernel_initializer"] = InverseDynamicsInitializer(in_shape, pair_layer, conv_dynamics=conv_dynamics)
         kwargs["kernel_regularizer"] = self.consistency_reg()
         kwargs["bias_initializer"] = zeros()
-        super().__init__(
-            *args, **kwargs,
-            units=units, 
-            name=name, 
-            use_bias=use_bias,
-        )
+
+        if conv_dynamics:
+            self.dyn_layer = Conv2D(1, 9, padding="same", name=name+"-conv", use_bias=False, **kwargs)
+        else:
+            self.dyn_layer = Dense(units=units, name=name+"-dense", use_bias=use_bias, **kwargs)
     
+
     def consistency_reg(self):
         """
         regularize consistency of forward-backward dynamics
@@ -94,13 +104,18 @@ class KoopmanConsistencyLayer(Dense):
         
         return regularizer
         
+    def call(self, x):
+        return self.dyn_layer(x)
+
     def get_config(self):
         config = super().get_config()
         config.update({
+            "units": self.units,
             "pair_layer": self.pair_layer,
             "cons_wt": self.cons_wt,
             "weight_decay": self.weight_decay,
-            "in_shape": self.in_shape
+            "in_shape": self.in_shape,
+            "conv_dynamics": self.conv_dynamics,
         })
         return config
 
@@ -124,21 +139,27 @@ class KoopmanAutoencoder(BaseAE):
             forward_steps=args.fwd_steps,
             backward_steps=args.bwd_steps,
             weight_decay=args.wd,
+            conv_dynamics=args.conv_dynamics,
         )
     
     def build_enc_dec(self, args, input_shape):
         if args.convolutional:
             self.encoder = ConvEncoder(args.depth, args.dilations, args.kernel_sizes, 
-                args.wd)
+                args.wd, conv_dynamics=args.conv_dynamics)
+
             # build encoder, get encoded (pre-flattened) shape
             _ = self.encoder(Input(input_shape))
             encoded_shape = self.encoder.encoded_shape
+
             # create decoder (with reversed kernels, reversed and inverse dilations)
             dilations = [1/i for i in args.dilations][::-1]
             self.decoder = ConvDecoder(args.depth, dilations, args.kernel_sizes[::-1],
-                args.wd, encoded_shape=encoded_shape, target_shape=input_shape)
+                args.wd, conv_dynamics=args.conv_dynamics, encoded_shape=encoded_shape, 
+                target_shape=input_shape)
+
         else:
             intermediate, bottleneck = args.sizes
+
             self.encoder = DenseAutoencoderBlock((intermediate, intermediate, bottleneck), 
                 args.wd, name="encoder")
             self.decoder = DenseAutoencoderBlock((intermediate, intermediate, input_shape[-1]), 
@@ -146,7 +167,7 @@ class KoopmanAutoencoder(BaseAE):
 
 
     def build_model(self, snapshot_shape, output_dims, fwd_wt, bwd_wt, id_wt, 
-            cons_wt, forward_steps, backward_steps, weight_decay):
+            cons_wt, forward_steps, backward_steps, weight_decay, conv_dynamics):
         """
         Create a Koopman autoencoder
         Args:
@@ -163,13 +184,17 @@ class KoopmanAutoencoder(BaseAE):
         current = inpt[:,backward_steps,:]
         print("Autoencoder Input shape:", inpt.shape, "current shape:", current.shape)
 
-        inshape = self.encoder(current).shape
-        self.forward = Dense(inshape[-1], use_bias=False, name="forward-dynamics",
-            kernel_initializer=glorot_normal(), kernel_regularizer=regularizers.l2(weight_decay))
-
+        inshape = self.encoder(current).shape[1:] # remove batch size
+        if conv_dynamics:
+            self.forward = Conv2D(1, 9, padding="same", use_bias=False, name="forward-dynamics-conv",
+                kernel_initializer=glorot_normal(), kernel_regularizer=regularizers.l2(weight_decay))
+        else:
+            self.forward = Dense(inshape[-1], use_bias=False, name="forward-dynamics-dense",
+                kernel_initializer=glorot_normal(), kernel_regularizer=regularizers.l2(weight_decay))
+        
         if self.has_bwd:
-            self.backward = KoopmanConsistencyLayer(in_shape=inshape, 
-                pair_layer=self.forward, cons_wt=cons_wt, 
+            self.backward = KoopmanConsistencyLayer(conv_dynamics=conv_dynamics, 
+                in_shape=inshape, pair_layer=self.forward, cons_wt=cons_wt, 
                 units=inshape[-1], use_bias=False, weight_decay=weight_decay,
                 name="backward-dynamics")
         else:

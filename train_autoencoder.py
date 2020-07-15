@@ -82,6 +82,7 @@ parser = argparse.ArgumentParser(description="see Erichson et al's 'PHYSICS-INFO
 parser.add_argument("--model",required=True,choices=["koopman","lyapunov"],help="name of the model to use")
 parser.add_argument("--name",type=str,required=True,help="name of this training run")
 parser.add_argument("--convolutional",action="store_true",default=False,help="create a convolutional version of the model")
+parser.add_argument("--conv-dynamics",action="store_true",default=False,help="use a convolutional dynamics layer")
 parser.add_argument("--dataset",type=str,default="flow_cylinder",help="name of dataset")
 parser.add_argument("--lr",type=float,default=defaults["lr"],help="learning rate")
 parser.add_argument("--wd",type=float,default=defaults["wd"],help="weight decay weighting factor")
@@ -114,6 +115,9 @@ parser.add_argument("--save",action="store_true",default=False,help="save these 
 parser.add_argument("--load",action="store_true",default=False,help="load hyperparameters from a file in the 'presets/'")
 
 args = parser.parse_args()
+
+if args.conv_dynamics and not args.convolutional:
+    raise ValueError("Convolutional dynamics require a convolutional encoder/decoder (add the --convolutional flag)")
 
 # echo args
 for k,v in args.__dict__.items():

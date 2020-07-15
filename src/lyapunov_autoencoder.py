@@ -37,7 +37,7 @@ def unvec(x, n):
     return tf.transpose(x)
 
 
-class LyapunovStableDense(Dense):
+class LyapunovStableLayer(Layer):
     """
     Dense layer with optional Lyapunov stability regularization
     Args:
@@ -45,7 +45,10 @@ class LyapunovStableDense(Dense):
         no_stab (bool): whether to have no stability regularization
     """
 
-    def __init__(self, kappa, weight_decay, gamma=4, no_stab=False, *args, **kwargs):
+    def __init__(self, units, kappa, weight_decay, name, gamma=4, no_stab=False, **kwargs):
+        super().__init__(name=name)
+
+        self.units = units
         self.weight_decay = weight_decay
         self.kappa = kappa
         self.gamma = gamma
@@ -54,7 +57,9 @@ class LyapunovStableDense(Dense):
             kwargs["kernel_regularizer"] = self.lyapunov_stability_reg()
         kwargs["kernel_initializer"] = glorot_normal()
         kwargs["bias_initializer"] = zeros()
-        super().__init__(*args, **kwargs)
+
+        self.dyn_layer = Dense(units=units, name=name+"dense", **kwargs)
+
 
     def lyapunov_stability_reg(self):
         """
@@ -92,9 +97,13 @@ class LyapunovStableDense(Dense):
         
         return stability_regularizer
 
+    def call(self, x):
+        return self.dyn_layer(x)
+
     def get_config(self):
         config = super().get_config()
         config.update({
+            "units": self.units,
             "kappa": self.kappa,
             "gamma": self.gamma,
             "weight_decay": self.weight_decay,
@@ -107,7 +116,7 @@ class LyapunovAutoencoder(BaseAE):
 
     def __init__(self, args, dataset=None):
         super().__init__(args, dataset)
-        dyn_units = self.build_enc_dec(args, dataset.input_shape[-1])
+        self.build_enc_dec(args, dataset.input_shape[-1])
         self.build_model(
             snapshot_shape=dataset.input_shape,
             output_dims=dataset.input_shape[-1],
@@ -144,7 +153,7 @@ class LyapunovAutoencoder(BaseAE):
 
         x = self.encoder(inpt)
         dyn_units = x.shape[-1]
-        self.dynamics = LyapunovStableDense(kappa=kappa, gamma=gamma, weight_decay=weight_decay,
+        self.dynamics = LyapunovStableLayer(kappa=kappa, gamma=gamma, weight_decay=weight_decay,
             no_stab=no_stability, units=dyn_units, name="lyapunov-dynamics")
 
         x = self.dynamics(x)
@@ -208,5 +217,5 @@ class LyapunovAutoencoder(BaseAE):
 
 
 CUSTOM_OBJ_DICT.update({
-    "LyapunovStableDense": LyapunovStableDense
+    "LyapunovStableLayer": LyapunovStableLayer
 })
