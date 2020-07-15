@@ -22,6 +22,7 @@ from src.read_dataset import *
 
 class CropToTarget(Layer):
     """
+    Does not affect channels
     Args:
         target_shape: shape, with no batch size
     """
@@ -79,8 +80,6 @@ class ConvDilateLayer(Layer):
     def call(self, x):
         # dilation is split up so as to reduce computation when possible, and skip the 
         # layer when dilation == 1
-        if self.dilation < 1:
-            x = self.dilation_layer(x)
         x = self.conv(x)
         if self.dilation > 1:
             x = self.dilation_layer(x)
@@ -88,6 +87,8 @@ class ConvDilateLayer(Layer):
             x = self.activation(x)
         if self.batchnorm is not None:
             x = self.batchnorm(x)
+        if self.dilation < 1:
+            x = self.dilation_layer(x)
         return x
     
     def get_config(self):
@@ -121,17 +122,17 @@ class ConvAutoencoderBlock(Layer, abc.ABC):
         self.batchnorm_last = batchnorm_last
 
     def make_conv_layers(self):
-        # create number of layers equal to depth
+        # create first depth-1 layers dynamically
         # filters = [2**i for i in range(self.depth-1, -1, -1)]
-        filters = [1 for i in range(self.depth)]
         for i in range(self.depth-1):
-            conv = ConvDilateLayer(name=self.name+str(i), filters=filters[i], 
+            conv = ConvDilateLayer(name=self.name+str(i), filters=6, 
                 kernel_size=self.kernel_sizes[i], dilation=self.dilations[i], 
                 weight_decay=self.weight_decay)
             setattr(self, "block"+str(i), conv)
 
+        # final layer
         i = self.depth - 1
-        conv = ConvDilateLayer(name=self.name+str(i), filters=filters[i], kernel_size=self.kernel_sizes[i], 
+        conv = ConvDilateLayer(name=self.name+str(i), filters=1, kernel_size=self.kernel_sizes[i], 
             dilation=self.dilations[i], weight_decay=self.weight_decay, activate=self.activate_last,
             batchnorm=self.batchnorm_last)
         setattr(self, "block"+str(i), conv)
@@ -155,10 +156,7 @@ class ConvAutoencoderBlock(Layer, abc.ABC):
 
 class ConvEncoder(ConvAutoencoderBlock):
     """
-    block of 3 conv layers, either for encoder or decoder
-    Args:
-        encoder (bool): whether this is an encoder (ie, false for decoder)
-        target_shape: only required for decoder, to get proper output shape
+    variable depth convolutional encoder
     """
 
     def __init__(self, depth, dilations, kernel_sizes, weight_decay, activate_last=False, 
@@ -187,10 +185,7 @@ class ConvEncoder(ConvAutoencoderBlock):
 
 class ConvDecoder(ConvAutoencoderBlock):
     """
-    block of 3 conv layers, either for encoder or decoder
-    Args:
-        encoder (bool): whether this is an encoder (ie, false for decoder)
-        target_shape: only required for decoder, to get proper output shape
+    variable depth convolutional decoder
     """
 
     def __init__(self, depth, dilations, kernel_sizes, weight_decay, activate_last=False, 
