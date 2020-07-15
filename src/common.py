@@ -60,8 +60,9 @@ class BaseAE(abc.ABC):
         run_name = self.dataset.dataname + "."
         run_name += "{}ep_{}bs_{}lr_{}wd_{}gc.".format(args.epochs, args.batchsize, args.lr, args.wd, args.gradclip)
         if args.convolutional:
-            run_name += "k" + "_".join([str(i) for i in args.kernel_sizes])
-            run_name += ".s" + "_".join([str(i) for i in args.dilations])
+            run_name += "k" + "".join([str(i) for i in args.kernel_sizes])
+            run_name += ".d" + "".join([str(i) for i in args.dilations])
+            run_name += ".f" + "".join([str(i) for i in args.filters])
         else:
             run_name += "s" + "_".join([str(i) for i in args.sizes])
         run_name += ".{}".format(args.seed)
