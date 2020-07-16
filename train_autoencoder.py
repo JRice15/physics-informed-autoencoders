@@ -89,6 +89,7 @@ parser.add_argument("--seed",type=int,default=0,help="random seed")
 parser.add_argument("--epochs",type=int,default=defaults["epochs"])
 parser.add_argument("--batchsize",type=int,default=defaults["batchsize"])
 parser.add_argument("--tboard",action="store_true",default=False,help="run tensorboard")
+parser.add_argument("--summary",action="store_true",default=False,help="show model summary")
 
 if args.convolutional:
     parser.add_argument("--depth",type=int,default=defaults["depth"],help="depth of convolutional network")
@@ -185,6 +186,9 @@ optimizer = Adam(
 )
 
 autoencoder.compile_model(optimizer)
+
+if args.summary:
+    autoencoder.model.summary()
 
 print("\n\n\nBegin Training")
 

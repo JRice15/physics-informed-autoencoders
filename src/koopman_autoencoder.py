@@ -250,7 +250,6 @@ class KoopmanAutoencoder(BaseAE):
         id_loss = id_wt * inverse_reg(current, self.encoder, self.decoder)
         self.model.add_loss(id_loss)
         self.model.add_metric(id_loss, name="id_loss", aggregation="mean")
-        # self.model.summary()
 
 
     def compile_model(self, optimizer):

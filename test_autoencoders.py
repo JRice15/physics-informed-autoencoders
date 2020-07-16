@@ -34,6 +34,7 @@ parser.add_argument("--pred-steps",type=int,default=50,help="number of timesteps
 parser.add_argument("--file",default=None,help="file with weights paths to compare. Each line should be: '<name><tab-character><weights path>'")
 parser.add_argument("--convolutional",action="store_true",default=False,help="whether to test convolutional models")
 parser.add_argument("--seed",type=int,default=0)
+parser.add_argument("--quick",action="store_true",default=False,help="whether to just test steps 1,3,5,10,20,30,...")
 
 args = parser.parse_args()
 
@@ -70,7 +71,7 @@ def run_name_from_model_path(model_path):
     return model_path
 
 
-def run_one_test(model_path, data, num_steps):
+def run_one_test(model_path, data, num_steps, step_arr):
     """
     test a set of weights with multi-step prediction
     """
@@ -99,13 +100,15 @@ def run_one_test(model_path, data, num_steps):
         snapshot = tfdata[:,i,:]
         x.append(encoder(snapshot))
 
-    for step in range(1, num_steps+1):
+    prev_step = 0
+    for step in step_arr:
         step_mse = []
         step_relpred_err = []
         for i in range(num_snapshots - num_steps):
 
-            # next step
-            x[i] = dynamics(x[i])
+            # next step(s)
+            for _ in range(step - prev_step):
+                x[i] = dynamics(x[i])
             pred = decoder(x[i]).numpy()
             true = data[:,i+step,:]
 
@@ -123,6 +126,8 @@ def run_one_test(model_path, data, num_steps):
                     dataset.write_im(true, title=str(step) + " steps ground truth", 
                         filename=dataset.dataname + ".truth_step" + str(step), directory="test_results/truth")
         
+        prev_step = step
+
         mean_mse = np.mean(step_mse)
         mean_relpred_err = np.mean(step_relpred_err)
         print(step, "steps MSE:", mean_mse, "relative error:", mean_relpred_err)
@@ -165,6 +170,11 @@ else:
         paths.append(model_path)
         names.append(name)
 
+if args.quick:
+    step_arr = [1,3,5] + list(range(10,args.pred_steps+1,10))
+else:
+    step_arr = range(1, args.pred_steps+1)
+
 
 mse_avgs = []
 mse_errbounds = []
@@ -172,19 +182,19 @@ relpred_avgs = []
 relpred_errbounds = []
 
 for p in paths:
-    m_min, m_max, m_avg, r_min, r_max, r_avg = run_one_test(p, data, args.pred_steps)
+    m_min, m_max, m_avg, r_min, r_max, r_avg = run_one_test(p, data, args.pred_steps, step_arr)
     mse_avgs.append(m_avg)
     mse_errbounds.append( (m_min, m_max) )
     relpred_avgs.append(r_avg)
     relpred_errbounds.append( (r_min, r_max) )
 
 
-xrange = list(range(len(mse_avgs[0])))
-
 fullname = args.name + "." + dataset.dataname
 if args.convolutional:
     fullname += ".conv"
 fullname += "." + str(args.pred_steps)
+if args.quick:
+    fullname += ".q"
 fb_desc = "with 90% confidence interval"
 
 if len(mse_avgs) > 6:
@@ -192,10 +202,11 @@ if len(mse_avgs) > 6:
     mse_errbounds = None
     relpred_errbounds = None
 
+mark = 0 if not args.quick else None
 
 # MSE
-make_plot(xrange=xrange, data=tuple(mse_avgs), dnames=names, title="Prediction MSE -- " + args.dataset, 
-    mark=0, axlabels=("steps", "mean squared error"), legendloc="upper left",
+make_plot(xrange=step_arr, data=tuple(mse_avgs), dnames=names, title="Prediction MSE -- " + args.dataset, 
+    mark=mark, axlabels=("steps", "mean squared error"), legendloc="upper left",
     marker_step=(len(mse_avgs[0]) // 6), fillbetweens=mse_errbounds,
     fillbetween_desc=fb_desc, ylim=1)
 
@@ -204,8 +215,8 @@ plt.savefig("test_results/" + fullname + ".multistep_mse.png")
 plt.clf()
 
 # Relative Error
-make_plot(xrange=xrange, data=tuple(relpred_avgs), dnames=names, title="Prediction Relative Error -- " + args.dataset, 
-    mark=0, axlabels=("steps", "relative error"), legendloc="upper left",
+make_plot(xrange=step_arr, data=tuple(relpred_avgs), dnames=names, title="Prediction Relative Error -- " + args.dataset, 
+    mark=mark, axlabels=("steps", "relative error"), legendloc="upper left",
     marker_step=(len(mse_avgs[0]) // 6), fillbetweens=relpred_errbounds,
     fillbetween_desc=fb_desc, ylim=1)
 
