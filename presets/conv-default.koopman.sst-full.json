@@ -1,0 +1,37 @@
+{
+  "name": "conv-default",
+  "dataset": "flow_cylinder",
+  "convolutional": true,
+  "conv-dynamics": true,
+  "lr": 0.01,
+  "wd": 0.0,
+  "gradclip": 0.5,
+  "epochs": 2000,
+  "batchsize": 64,
+  "depth": 4,
+  "dilations": [
+    1,
+    2,
+    3,
+    2
+  ],
+  "filters": [
+    6,
+    6,
+    6
+  ],
+  "kernel_sizes": [
+    5,
+    5,
+    7,
+    5
+  ],
+  "fwd_steps": 8,
+  "bwd_steps": 8,
+  "identity": 1,
+  "forward": 1,
+  "backward": 0.1,
+  "consistency": 0.1,
+  "save": false,
+  "load": true
+}

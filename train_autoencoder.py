@@ -51,11 +51,9 @@ dataset = data_from_name(args.dataset, (not args.convolutional))
 
 # Load defaults
 if args.convolutional:
-    defaults_file = "presets/conv-default.{}.{}.json".format(model_type, 
-        dataset.__class__.__name__.lower())
+    defaults_file = "presets/conv-default.{}.{}.json".format(model_type, dataset.dataname)
 else:
-    defaults_file = "presets/orig-paper.{}.{}.json".format(model_type, 
-        dataset.__class__.__name__.lower())
+    defaults_file = "presets/orig-paper.{}.{}.json".format(model_type, dataset.dataname)
 try:
     with open(defaults_file, "r") as f:
         defaults = json.load(f)
@@ -173,7 +171,7 @@ callbacks = [
         verbose=1, period=min(20, args.epochs//5)),
     ImgWriter(pipeline=autoencoder.get_pipeline(), run_name=run_name, 
         dataset=dataset, freq=args.epochs//5),
-    EarlyStopping(min_delta=1e-5, patience=round(args.epochs // 5 * 1.2), mode="min",
+    EarlyStopping(min_delta=1e-5, patience=round(args.epochs // 5 * 1.4), mode="min",
     verbose=1)
 ]
 if args.tboard:
