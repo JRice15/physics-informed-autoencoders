@@ -10,7 +10,7 @@ import keras.backend as K
 import numpy as np
 import tensorflow as tf
 from keras.callbacks import (LearningRateScheduler, ModelCheckpoint,
-                             ReduceLROnPlateau, TensorBoard)
+                             ReduceLROnPlateau, TensorBoard, EarlyStopping)
 from keras.losses import mse
 from keras import metrics
 from keras.models import Model
@@ -173,6 +173,8 @@ callbacks = [
         verbose=1, period=min(20, args.epochs//5)),
     ImgWriter(pipeline=autoencoder.get_pipeline(), run_name=run_name, 
         dataset=dataset, freq=args.epochs//5),
+    EarlyStopping(min_delta=1e-5, patience=round(args.epochs // 5 * 1.2), mode="min",
+    verbose=1)
 ]
 if args.tboard:
     callbacks.append(TensorBoard(histogram_freq=100, write_graph=False, write_images=True, 
