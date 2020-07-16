@@ -1,5 +1,5 @@
 {
-  "name": "orig-paper-cylinder",
+  "name": "conv-default",
   "dataset": "flow_cylinder",
   "convolutional": true,
   "conv-dynamics": true,

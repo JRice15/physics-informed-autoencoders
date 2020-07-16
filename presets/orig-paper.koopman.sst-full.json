@@ -1,6 +1,6 @@
 {
     "name": "orig-paper",
-    "dataset": "sst",
+    "dataset": "sst-full",
     "lr": 0.01,
     "wd": 0.0,
     "gradclip": 0.5,

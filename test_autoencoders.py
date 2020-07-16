@@ -28,6 +28,7 @@ print("Keras version:", keras.__version__) # 2.4.3
 
 parser = argparse.ArgumentParser()
 
+parser.add_argument("--name",required=True,help="name of this test")
 parser.add_argument("--dataset",required=True,help="name of the dataset to use")
 parser.add_argument("--pred-steps",type=int,default=50,help="number of timesteps to predict")
 parser.add_argument("--file",default=None,help="file with weights paths to compare. Each line should be: '<name><tab-character><weights path>'")
@@ -180,7 +181,10 @@ for p in paths:
 
 xrange = list(range(len(mse_avgs[0])))
 
-fullname = "_vs_".join(names) + "." + dataset.dataname
+fullname = args.name + "." + dataset.dataname
+if args.convolutional:
+    fullname += ".conv"
+fullname += "." + str(args.pred_steps)
 fb_desc = "with 90% confidence interval"
 
 if len(mse_avgs) > 6:

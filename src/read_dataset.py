@@ -22,7 +22,9 @@ def data_from_name(name, flat):
     if filtered_name in ("cylinderfull", "flowcylinderfull"):
         return FlowCylinder(flat, full=True)
     if filtered_name in ("sst", "seasurfacetemp", "seasurfacetemperature"):
-        return SST(flat)
+        return SST(flat, full=False)
+    if filtered_name in ("sstfull", "fullsst"):
+        return SST(flat, full=True)
     raise ValueError("Unknown dataset " + name)
 
 
@@ -127,20 +129,22 @@ class FlowCylinder(CustomDataset):
 
 class SST(CustomDataset):
 
-    def __init__(self, flat):
+    def __init__(self, flat, full=False):
         self.flat = flat
+        self.full = full
 
         X = np.load('data/sstday.npy')
         lats = np.load('data/lats.npy')
         lons = np.load('data/lons.npy')
 
         # make 64x64 crop
-        ybottom = 6
-        xleft = 28
-        xright = -58
-        X = X[:,ybottom:,xleft:xright]
-        lats = lats[ybottom:,xleft:xright]
-        lons = lons[ybottom:,xleft:xright]
+        if not full:
+            ybottom = 6
+            xleft = 28
+            xright = -58
+            X = X[:,ybottom:,xleft:xright]
+            lats = lats[ybottom:,xleft:xright]
+            lons = lons[ybottom:,xleft:xright]
         imshape = X[0].shape
 
         indices = range(3600)
@@ -167,7 +171,8 @@ class SST(CustomDataset):
 
         print("SST X shape:", X_train.shape, "Xtest shape:", X_test.shape)
 
-        super().__init__(name="sst", X=X_train, Xtest=X_test, imshape=imshape,
+        name="sst-full" if full else "sst"
+        super().__init__(name=name, X=X_train, Xtest=X_test, imshape=imshape,
             input_shape=X_train[0].shape, write_index=140)
         self.lats = lats
         self.lons = lons
@@ -183,14 +188,24 @@ class SST(CustomDataset):
         maxtemp = np.max(img)
         minmax = np.maximum(mintemp,maxtemp)
 
-        m = Basemap(projection='mill',
-                    lon_0 = 180,
-                    llcrnrlat = 16.6,
-                    llcrnrlon = 261.5,
-                    urcrnrlat = 32,
-                    urcrnrlon = 277.9,
-                    #resolution='l',
-                    ax=ax)
+        if self.full:
+            m = Basemap(projection='mill',
+                        lon_0 = 160,
+                        llcrnrlat = 15.1,
+                        llcrnrlon = 255.1,
+                        urcrnrlat = 32.4,
+                        urcrnrlon = 292.4,
+                        #resolution='l',
+                        ax=ax)
+        else:
+            m = Basemap(projection='mill',
+                        lon_0 = 180,
+                        llcrnrlat = 16.6,
+                        llcrnrlon = 261.5,
+                        urcrnrlat = 32,
+                        urcrnrlon = 277.9,
+                        #resolution='l',
+                        ax=ax)
         m.pcolormesh(self.lons, self.lats, img, cmap=cmocean.cm.balance, 
             latlon=True, alpha=1.0, shading='gouraud', vmin = -minmax, vmax=minmax)
         m.fillcontinents(color='lightgray', lake_color='aqua')

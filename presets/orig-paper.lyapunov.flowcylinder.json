@@ -1,5 +1,5 @@
 {
-  "name": "erichson-et-al-cylinder",
+  "name": "orig-paper",
   "dataset": "flow_cylinder",
   "lr": 0.01,
   "wd": 0.000001,
