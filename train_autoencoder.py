@@ -170,10 +170,10 @@ callbacks = [
     LearningRateScheduler(lr_schedule(args)),
     ModelCheckpoint(model_path, save_best_only=True, save_weights_only=False, 
         verbose=1, period=min(20, args.epochs//5)),
-    ImgWriter(pipeline=autoencoder.get_pipeline(), run_name=run_name, 
-        dataset=dataset, freq=args.epochs//5),
-    EarlyStopping(min_delta=1e-5, patience=round(args.epochs // 5 * 1.4), mode="min",
-    verbose=1)
+    # ImgWriter(pipeline=autoencoder.get_pipeline(), run_name=run_name, 
+    #     dataset=dataset, freq=args.epochs//5),
+    # EarlyStopping(min_delta=1e-5, patience=round(args.epochs // 5 * 1.4), mode="min",
+    #     verbose=1)
 ]
 if args.tboard:
     callbacks.append(TensorBoard(histogram_freq=100, write_graph=False, write_images=True, 
