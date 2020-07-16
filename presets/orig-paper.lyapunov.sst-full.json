@@ -1,0 +1,20 @@
+{
+  "name": "orig-paper",
+  "dataset": "sst-full",
+  "lr": 0.01,
+  "wd": 0.000001,
+  "gradclip": 0,
+  "epochs": 6000,
+  "batchsize": 34,
+  "sizes": [
+    40,
+    25,
+    15
+  ],
+  "lambd": 3,
+  "kappa": 3,
+  "gamma": 4,
+  "no_stability": false,
+  "save": true,
+  "load": false
+}
