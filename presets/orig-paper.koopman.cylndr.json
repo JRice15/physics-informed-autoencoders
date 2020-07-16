@@ -1,6 +1,6 @@
 {
   "name": "orig-paper-cylinder",
-  "dataset": "flow_cylinder",
+  "dataset": "cylndr",
   "lr": 0.01,
   "wd": 0.0,
   "gradclip": 0.5,

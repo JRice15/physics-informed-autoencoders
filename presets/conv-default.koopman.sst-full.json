@@ -1,6 +1,6 @@
 {
   "name": "conv-default",
-  "dataset": "flow_cylinder",
+  "dataset": "sst-full",
   "convolutional": true,
   "conv-dynamics": true,
   "lr": 0.01,

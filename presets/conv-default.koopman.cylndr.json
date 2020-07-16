@@ -1,6 +1,6 @@
 {
   "name": "conv-default",
-  "dataset": "flow_cylinder",
+  "dataset": "cylndr",
   "convolutional": true,
   "conv-dynamics": true,
   "lr": 0.01,
