@@ -174,7 +174,7 @@ callbacks = [
         verbose=1, period=min(20, args.epochs//5)),
     ImgWriter(pipeline=autoencoder.get_pipeline(), run_name=run_name, 
         dataset=dataset, freq=args.epochs//5),
-    EarlyStopping(min_delta=1e-5, patience=round(args.epochs // 5 * 2), mode="min",
+    EarlyStopping(min_delta=1e-5, patience=round(args.epochs // 5 * 1.5), mode="min",
         verbose=1)
 ]
 if args.tboard:

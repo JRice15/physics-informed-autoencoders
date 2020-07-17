@@ -39,6 +39,9 @@ parser.add_argument("--load-last",action="store_true",default=False,help="reload
 
 args = parser.parse_args()
 
+if args.load_last and args.file:
+    raise ValueError("load-last and file args are incompatible")
+
 set_seed(args.seed)
 os.makedirs("test_results/truth",exist_ok=True)
 
@@ -151,7 +154,7 @@ if args.file is not None:
     names = [i[0].strip() for i in lines]
     paths = [i[1].strip() for i in lines]
     
-else:
+elif not args.load_last:
     # User interface mode
     paths = []
     names = []
@@ -178,7 +181,7 @@ else:
 
 
 if args.load_last:
-    mse_avgs, mse_errbounds, relpred_avgs, relpred_errbounds = np.load("test_results/lastdata.npy")
+    mse_avgs, mse_errbounds, relpred_avgs, relpred_errbounds = np.load("test_results/lastdata.npy", allow_pickle=True)
 else:
     mse_avgs = []
     mse_errbounds = []

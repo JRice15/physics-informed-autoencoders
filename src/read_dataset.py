@@ -149,8 +149,8 @@ class SST(CustomDataset):
 
         indices = range(3600)
         #training_idx, test_idx = indices[:730], indices[730:1000] 
-        # 3 years, 1.5 years
-        training_idx, test_idx = indices[220:1315], indices[1495:2050]
+        # 3 years, 1 years
+        training_idx, test_idx = indices[220:1315], indices[1315:1680]
         #training_idx, test_idx = indices[230:2420], indices[2420:2557] # 6 years
         #training_idx, test_idx = indices[0:1825], indices[1825:2557] # 5 years    
         #training_idx, test_idx = indices[230:1325], indices[1325:2000] # 3 years
