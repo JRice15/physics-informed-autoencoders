@@ -25,6 +25,8 @@ from src.read_dataset import *
 print("Tensorflow version:", tf.__version__) # 2.2.0
 print("Keras version:", keras.__version__) # 2.4.3
 
+# tf.compat.v1.disable_eager_execution()
+
 def make_dirs(dirname):
     os.makedirs("data", exist_ok=True)
     os.makedirs("models", exist_ok=True)
@@ -176,7 +178,7 @@ callbacks = [
         verbose=1)
 ]
 if args.tboard:
-    callbacks.append(TensorBoard(histogram_freq=100, write_graph=False, write_images=True, 
+    callbacks.append(TensorBoard(histogram_freq=100, write_graph=True, write_images=True, 
         update_freq=(args.batchsize * 20), embeddings_freq=100))
 
 gradclip = None if args.gradclip == 0 else args.gradclip

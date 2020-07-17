@@ -265,20 +265,20 @@ class KoopmanAutoencoder(BaseAE):
         run_name += self.run_name_common_suffix()
         return run_name
 
-    def data_formatter(self, X, bwd_steps, fwd_steps):
+    def data_formatter(self, X):
         """
         slice X into sequences of 2*steps+1 snapshots for input to koopman autoencoder
         """
+        bwd = self.args.bwd_steps
+        fwd = self.args.fwd_steps
         out = []
-        for i in range(bwd_steps, X.shape[0]-fwd_steps):
-            out.append( X[i-bwd_steps:i+fwd_steps+1] )
+        for i in range(bwd, X.shape[0]-fwd):
+            out.append( X[i-bwd:i+fwd+1] )
         return np.array(out)
 
     def format_data(self):
-        self.X = self.data_formatter(
-            self.dataset.X, self.args.bwd_steps, self.args.fwd_steps)
-        valX = self.data_formatter(
-            self.dataset.Xtest, self.args.bwd_steps, self.args.fwd_steps)
+        self.X = self.data_formatter(self.dataset.X)
+        valX = self.data_formatter(self.dataset.Xtest)
         self.val_data = (valX, None)
 
     def train(self, callbacks):
