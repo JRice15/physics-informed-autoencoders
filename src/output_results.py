@@ -150,15 +150,14 @@ def make_plot(xrange, data, title, axlabels, dnames=None, marker_step=1,
             continue
         if i == mark:
             mark_data = data[i]
-            plt.plot(xrange, data[i], marker=".", markevery=marker_step, mfc="black", mec="black",
-                markersize=5)
-        else:
-            plt.plot(xrange, data[i])
+        plt.plot(xrange, data[i])
         if fillbetweens is not None:
             plt.fill_between(xrange, fillbetweens[i][0], fillbetweens[i][1], alpha=0.15)
 
     if mark_data is not None:
-        points = mark_data[::marker_step]
+        mark_indices = list(range(xrange[0],xrange[-1],marker_step))
+        points = np.interp(mark_indices, xrange, mark_data)
+        # points = mark_data[mark_indices]
         up = True
         for i,y in enumerate(points):
             valstr = get_num_str(y)
@@ -168,13 +167,15 @@ def make_plot(xrange, data, title, axlabels, dnames=None, marker_step=1,
             else:
                 xytext = (0,-12)
                 up = True
-            plt.annotate(valstr, xy=(marker_step*i+skipshift,y), xytext=xytext, 
+            xy = (xrange[0] + marker_step*i + skipshift, y)
+            plt.plot(*xy, marker=".", mfc="black", mec="black", markersize=5)
+            plt.annotate(valstr, xy=xy, xytext=xytext, 
                 horizontalalignment="center", textcoords="offset points")
     
         valstr = get_num_str(mark_data[-1])
         ytext = 5 if up else -12
-        plt.annotate(valstr, xy=(len(mark_data)-1+skipshift, mark_data[-1]), xytext=(1,ytext), textcoords="offset points")
-        plt.plot(len(mark_data)-1+skipshift, mark_data[-1], marker=".", color="green")
+        plt.annotate(valstr, xy=(xrange[-1]+skipshift, mark_data[-1]), xytext=(1,ytext), textcoords="offset points")
+        plt.plot(xrange[-1]+skipshift, mark_data[-1], marker=".", color="green")
 
     plt.title(title)
     plt.xlabel(axlabels[0])

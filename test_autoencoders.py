@@ -181,7 +181,7 @@ else:
 
 
 if args.load_last:
-    mse_avgs, mse_errbounds, relpred_avgs, relpred_errbounds = np.load("test_results/lastdata.npy", allow_pickle=True)
+    mse_avgs, mse_errbounds, relpred_avgs, relpred_errbounds, names = np.load("test_results/lastdata.npy", allow_pickle=True)
 else:
     mse_avgs = []
     mse_errbounds = []
@@ -195,7 +195,7 @@ else:
         relpred_avgs.append(r_avg)
         relpred_errbounds.append( (r_min, r_max) )
     
-    np.save("test_results/lastdata.npy", [mse_avgs, mse_errbounds, relpred_avgs, relpred_errbounds])
+    np.save("test_results/lastdata.npy", [mse_avgs, mse_errbounds, relpred_avgs, relpred_errbounds, names])
 
 
 fullname = args.name + "." + dataset.dataname
@@ -206,19 +206,20 @@ if args.quick:
     fullname += ".q"
 
 
-mark = 0 if not args.quick else None
+final_mses = [i[-1] for i in relpred_avgs]
+mark = final_mses.index(min(final_mses))
 
 # MSE
 make_plot(xrange=step_arr, data=tuple(mse_avgs), dnames=names, title="Prediction MSE -- " + args.dataset, 
     mark=mark, axlabels=("steps", "mean squared error"), legendloc="upper left",
-    marker_step=(len(mse_avgs[0]) // 6), fillbetweens=mse_errbounds,
+    marker_step=(args.pred_steps // 5), fillbetweens=mse_errbounds,
     fillbetween_desc="w/ 90% confidence", ylim=1)
 plt.savefig("test_results/" + fullname + ".multistep_mse.w_confidence.png")
 plt.clf()
 
 make_plot(xrange=step_arr, data=tuple(mse_avgs), dnames=names, title="Prediction MSE -- " + args.dataset, 
     mark=mark, axlabels=("steps", "mean squared error"), legendloc="upper left",
-    marker_step=(len(mse_avgs[0]) // 6), fillbetweens=None,
+    marker_step=(args.pred_steps // 5), fillbetweens=None,
     fillbetween_desc="", ylim=1)
 plt.savefig("test_results/" + fullname + ".multistep_mse.png")
 plt.clf()
@@ -226,14 +227,14 @@ plt.clf()
 # Relative Error
 make_plot(xrange=step_arr, data=tuple(relpred_avgs), dnames=names, title="Prediction Relative Error -- " + args.dataset, 
     mark=mark, axlabels=("steps", "relative error"), legendloc="upper left",
-    marker_step=(len(mse_avgs[0]) // 6), fillbetweens=relpred_errbounds,
+    marker_step=(args.pred_steps // 5), fillbetweens=relpred_errbounds,
     fillbetween_desc="w/ 90% confidence", ylim=1)
 plt.savefig("test_results/" + fullname + ".multistep_relpred_err.w_confidence.png")
 plt.clf()
 
 make_plot(xrange=step_arr, data=tuple(relpred_avgs), dnames=names, title="Prediction Relative Error -- " + args.dataset, 
     mark=mark, axlabels=("steps", "relative error"), legendloc="upper left",
-    marker_step=(len(mse_avgs[0]) // 6), fillbetweens=None,
+    marker_step=(args.pred_steps // 5), fillbetweens=None,
     fillbetween_desc="", ylim=1)
 plt.savefig("test_results/" + fullname + ".multistep_relpred_err.png")
 plt.clf()
