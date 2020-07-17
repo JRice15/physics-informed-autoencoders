@@ -10,8 +10,8 @@
       96,
       12
     ],
-    "fwd_steps": 12,
-    "bwd_steps": 8,
+    "fwd_steps": 14,
+    "bwd_steps": 14,
     "identity": 1,
     "forward": 1,
     "backward": 0.1,
