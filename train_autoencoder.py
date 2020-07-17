@@ -90,8 +90,10 @@ parser.add_argument("--gradclip",type=float,default=defaults["gradclip"],help="g
 parser.add_argument("--seed",type=int,default=0,help="random seed")
 parser.add_argument("--epochs",type=int,default=defaults["epochs"])
 parser.add_argument("--batchsize",type=int,default=defaults["batchsize"])
+
 parser.add_argument("--tboard",action="store_true",default=False,help="run tensorboard")
 parser.add_argument("--summary",action="store_true",default=False,help="show model summary")
+parser.add_argument("--no-earlystopping",action="store_true",default=False,help="do not use early stopping")
 
 if args.convolutional:
     parser.add_argument("--depth",type=int,default=defaults["depth"],help="depth of convolutional network")
@@ -174,9 +176,11 @@ callbacks = [
         verbose=1, period=min(20, args.epochs//5)),
     ImgWriter(pipeline=autoencoder.get_pipeline(), run_name=run_name, 
         dataset=dataset, freq=args.epochs//5),
-    EarlyStopping(min_delta=1e-5, patience=round(args.epochs // 5 * 1.5), mode="min",
-        verbose=1)
 ]
+if not args.no_earlystopping:
+    callbacks.append(
+        EarlyStopping(min_delta=1e-5, patience=round(args.epochs // 5 * 1.5), mode="min",
+            verbose=1))
 if args.tboard:
     callbacks.append(TensorBoard(histogram_freq=100, write_graph=True, write_images=True, 
         update_freq=(args.batchsize * 20), embeddings_freq=100))
