@@ -61,13 +61,17 @@ def get_pipeline(model):
     decoders = [i for i in model.layers if "decoder" in i.name]
     if len(decoders) != 1:
         raise ValueError("{} decoder layers found: {}".format(len(decoders), decoders))
-    return encoders + dynamics + decoders
+    pipeline = encoders + dynamics + decoders
+    for i in pipeline:
+        print(i.name)
+    return pipeline
 
 
 # Read Data
 dataset = data_from_name(args.dataset, (not args.convolutional))
 data = np.concatenate([dataset.X, dataset.Xtest], axis=0)
 
+print("data shape:", data.shape)
 
 def run_name_from_model_path(model_path):
     model_path = re.sub(r".*/models/model\.", "", model_path)
@@ -85,8 +89,10 @@ def run_one_test(model_path, data, num_steps, step_arr):
     dirname = run_name_from_model_path(model_path)
     os.makedirs("test_results/" + dirname, exist_ok=True)
 
-    num_snapshots = data.shape[0]
-    data = np.reshape(data, (1, num_snapshots, -1))
+    shape = data.shape
+    num_snapshots = shape[0]
+    data = data.reshape((1,) + shape)
+    print("data shape:", data.shape)
     tfdata = tf.convert_to_tensor(data)
 
     mse_min = []
@@ -101,7 +107,8 @@ def run_one_test(model_path, data, num_steps, step_arr):
 
     x = []
     for i in range(num_snapshots - num_steps):
-        snapshot = tfdata[:,i,:]
+        snapshot = tfdata[:,i,...]
+        if i == 0: print("snapshot shape:", snapshot.shape)
         x.append(encoder(snapshot))
 
     prev_step = 0
