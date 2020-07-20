@@ -12,7 +12,7 @@
   "dilations": [
     1,
     2,
-    3,
+    2,
     2
   ],
   "filters": [
@@ -21,10 +21,10 @@
     6
   ],
   "kernel_sizes": [
-    5,
-    5,
-    7,
-    5
+    3,
+    3,
+    3,
+    3
   ],
   "fwd_steps": 8,
   "bwd_steps": 8,
