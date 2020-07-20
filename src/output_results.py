@@ -110,7 +110,7 @@ def get_num_str(num):
         num = "{:.5f}".format(num)
     return num
 
-def save_history(H: History, run_name, marker_step=1000, skip=200):
+def save_history(H: History, run_name, marker_step=1000, skip=100):
     for k in H.history.keys():
         if not k.startswith("val_"):
             # skips first 200 epochs for clearer scale
@@ -167,15 +167,15 @@ def make_plot(xrange, data, title, axlabels, dnames=None, marker_step=1,
             else:
                 xytext = (0,-12)
                 up = True
-            xy = (xrange[0] + marker_step*i + skipshift, y)
+            xy = (xrange[0] + marker_step*i, y)
             plt.plot(*xy, marker=".", mfc="black", mec="black", markersize=5)
             plt.annotate(valstr, xy=xy, xytext=xytext, 
                 horizontalalignment="center", textcoords="offset points")
     
         valstr = get_num_str(mark_data[-1])
         ytext = 5 if up else -12
-        plt.annotate(valstr, xy=(xrange[-1]+skipshift, mark_data[-1]), xytext=(1,ytext), textcoords="offset points")
-        plt.plot(xrange[-1]+skipshift, mark_data[-1], marker=".", color="green")
+        plt.annotate(valstr, xy=(xrange[-1], mark_data[-1]), xytext=(1,ytext), textcoords="offset points")
+        plt.plot(xrange[-1], mark_data[-1], marker=".", color="green")
 
     plt.title(title)
     plt.xlabel(axlabels[0])

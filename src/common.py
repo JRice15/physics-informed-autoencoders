@@ -57,7 +57,10 @@ class BaseAE(abc.ABC):
 
     def run_name_common_suffix(self):
         args = self.args
-        run_name = self.dataset.dataname + "."
+        run_name = ""
+        if args.conv_dynamics:
+            run_name += "c-dyn."
+        run_name += self.dataset.dataname + "."
         run_name += "{}ep_{}bs_{}lr_{}wd_{}gc.".format(args.epochs, args.batchsize, args.lr, args.wd, args.gradclip)
         if args.convolutional:
             run_name += "k" + "".join([str(i) for i in args.kernel_sizes])
