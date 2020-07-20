@@ -128,7 +128,6 @@ def get_activation(act_name, name):
     raise ValueError("Bad activation name '{}'".format(act_name))
 
 
-
 def inverse_reg(x, encoder, decoder):
     """
     regularizer to enforce that the decoder is the inverse of the encoder. 
@@ -143,3 +142,22 @@ def inverse_reg(x, encoder, decoder):
     x_pred = decoder(encoder(x))
     norm = tf.reduce_mean(tf.square(x - x_pred))
     return norm
+
+
+def vis_model(model: Model):
+    print("Model structure:")
+    unimportant_names = ["input", "tf_op_layer", "add_loss", "add_metric"]
+    for i in model.layers:
+        if not any([i.name.startswith(j) for j in unimportant_names]):
+            vis_layer(i, 2)
+
+def vis_layer(layer: Layer, indent):
+    try:
+        rep = layer.vis_repr()
+    except AttributeError:
+        rep = ""
+    print(" "*indent + layer.name + ": " + layer.__class__.__name__ + " " + str(rep))
+    for k,v in vars(layer).items():
+        if isinstance(v, Layer):
+            vis_layer(v, indent+2)
+

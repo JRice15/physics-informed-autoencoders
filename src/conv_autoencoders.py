@@ -50,18 +50,20 @@ class ConvDilateLayer(Layer):
     """
     Conv layer and Pooling/Upsampling, with optional TanH activation and/or Batchnorm
     Args:
+        up (bool): whether is upsampling or downsampling
         dilation (int|float): >1 results in pooling, <1 results in upsampling by 1/dilation
     """
 
-    def __init__(self, name, filters, kernel_size, dilation, weight_decay, activate=True, 
+    def __init__(self, up, name, filters, kernel_size, dilation, weight_decay, activate=True, 
             batchnorm=False, **kwargs):
         super().__init__(name=name, **kwargs)
+        self.up = up
         self.weight_decay = weight_decay
         self.kernel_size = kernel_size
         self.dilation = dilation
         self.filters = filters
 
-        conv_layer = Conv2D if dilation > 1 else Conv2DTranspose
+        conv_layer = Conv2DTranspose if up else Conv2D
         self.conv = conv_layer(
             filters=filters,
             kernel_size=kernel_size,
@@ -72,22 +74,23 @@ class ConvDilateLayer(Layer):
         )
         self.activation = Activation(tanh, name=name+"-tanh") if activate else None
         self.batchnorm = BatchNormalization(name=name+"-batchnorm") if batchnorm else None
-        if dilation > 1:
-            self.dilation_layer = MaxPooling2D(dilation)
-        else:
-            self.dilation_layer = UpSampling2D(round(1/dilation))
+        if self.dilation > 1:
+            if not up:
+                self.dilation_layer = MaxPooling2D(dilation, name=name+"-maxpool")
+            else:
+                self.dilation_layer = UpSampling2D(dilation, name=name+"-upsample")
     
     def call(self, x):
         # dilation is split up so as to reduce computation when possible, and skip the 
         # layer when dilation == 1
         x = self.conv(x)
-        if self.dilation > 1:
+        if not self.up and self.dilation > 1:
             x = self.dilation_layer(x)
         if self.activation is not None:
             x = self.activation(x)
         if self.batchnorm is not None:
             x = self.batchnorm(x)
-        if self.dilation < 1:
+        if self.up and self.dilation > 1:
             x = self.dilation_layer(x)
         return x
     
@@ -100,8 +103,16 @@ class ConvDilateLayer(Layer):
             "dilation": self.dilation,
             "activate": self.activation is not None,
             "batchnorm": self.batchnorm is not None,
+            "up": self.up
         })
         return config
+
+    def vis_repr(self):
+        return {
+            "filters": self.filters,
+            "dilation": self.dilation,
+            "kernel_size": self.kernel_size
+        }
 
 
 
@@ -123,17 +134,17 @@ class ConvAutoencoderBlock(Layer, abc.ABC):
         self.batchnorm_last = batchnorm_last
         self.conv_dynamics = conv_dynamics
 
-    def make_conv_layers(self):
+    def make_conv_layers(self, up):
         # create first depth-1 layers dynamically
         for i in range(self.depth-1):
-            conv = ConvDilateLayer(name=self.name+str(i), filters=self.filters[i], 
+            conv = ConvDilateLayer(up=up, name=self.name+str(i), filters=self.filters[i], 
                 kernel_size=self.kernel_sizes[i], dilation=self.dilations[i], 
                 weight_decay=self.weight_decay)
             setattr(self, "block"+str(i), conv)
 
         # final layer
         i = self.depth - 1
-        conv = ConvDilateLayer(name=self.name+str(i), filters=1, kernel_size=self.kernel_sizes[i], 
+        conv = ConvDilateLayer(up=up, name=self.name+str(i), filters=1, kernel_size=self.kernel_sizes[i], 
             dilation=self.dilations[i], weight_decay=self.weight_decay, activate=self.activate_last,
             batchnorm=self.batchnorm_last)
         setattr(self, "block"+str(i), conv)
@@ -169,7 +180,7 @@ class ConvEncoder(ConvAutoencoderBlock):
             conv_dynamics=conv_dynamics, filters=filters, **kwargs)
 
         self.encoded_shape = None # computed during call
-        self.make_conv_layers()
+        self.make_conv_layers(up=False)
 
     def call(self, x):
         x = AddChannels()(x)
@@ -201,7 +212,7 @@ class ConvDecoder(ConvAutoencoderBlock):
 
         self.target_shape = target_shape
         self.encoded_shape = encoded_shape
-        self.make_conv_layers()
+        self.make_conv_layers(up=True)
 
     def call(self, x, withshape=False):
         if not self.conv_dynamics:

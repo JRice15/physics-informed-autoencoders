@@ -166,8 +166,7 @@ class KoopmanAutoencoder(BaseAE):
             encoded_shape = self.encoder.encoded_shape
 
             # create decoder (with reversed kernels, reversed and inverse dilations)
-            dilations = [1/i for i in args.dilations][::-1]
-            self.decoder = ConvDecoder(args.depth, dilations, args.kernel_sizes[::-1],
+            self.decoder = ConvDecoder(args.depth, args.dilations[::-1], args.kernel_sizes[::-1],
                 args.filters, args.wd, conv_dynamics=args.conv_dynamics, encoded_shape=encoded_shape, 
                 target_shape=input_shape)
 

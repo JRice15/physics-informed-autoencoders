@@ -194,7 +194,20 @@ optimizer = Adam(
 autoencoder.compile_model(optimizer)
 
 if args.summary:
+    import pydot
+    # summarize
     autoencoder.model.summary()
+    # plot
+    keras.utils.pydot = pydot
+    layers = autoencoder.model._layers
+    autoencoder.model._layers = [i for i in layers if isinstance(i, Layer)]
+    keras.utils.plot_model(
+        autoencoder.model, show_shapes=True
+    )
+    autoencoder.model._layers = layers
+
+# output AE structure
+vis_model(autoencoder.model)
 
 print("\n\n\nBegin Training")
 
