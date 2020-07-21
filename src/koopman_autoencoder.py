@@ -25,9 +25,13 @@ class DynamicsInitializer(Initializer):
         self.scale = init_scale
     
     def __call__(self, shape, dtype=None):
+        perm = [i for i in range(len(shape))]
+        perm[0] = 1
+        perm[1] = 0
         weight = RandomNormal(0, 1)(shape, dtype)
         U, S, V = np.linalg.svd(weight)
-        return np.matmul(U, V.T) * self.scale
+        V_T = np.transpose(V, axes=perm)
+        return np.matmul(U, V_T) * self.scale
     
     def get_config(self):
         return {"init_scale": self.scale}
