@@ -110,10 +110,10 @@ def get_num_str(num):
         num = "{:.5f}".format(num)
     return num
 
-def save_history(H: History, run_name, marker_step=1000, skip=100):
+def save_history(H: History, run_name, marker_step=1000, skip=30):
     for k in H.history.keys():
         if not k.startswith("val_"):
-            # skips first 200 epochs for clearer scale
+            # skips first couple epochs for clearer scale
             if len(H.history[k]) < 2 * skip:
                 skip = 0
             train_data = H.history[k][skip:]
