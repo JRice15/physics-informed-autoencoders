@@ -13,7 +13,7 @@ from keras.layers import (Activation, Add, BatchNormalization, Concatenate,
                           Flatten, GlobalAveragePooling2D, GlobalMaxPooling2D,
                           Lambda, Layer, LeakyReLU, MaxPooling2D, ReLU,
                           Reshape, Softmax, Subtract, UpSampling2D,
-                          ZeroPadding2D, add)
+                          ZeroPadding2D, add, SeparableConv2D, AveragePooling2D)
 from keras.models import Model
 
 from src.common import *
@@ -76,9 +76,11 @@ class ConvDilateLayer(Layer):
         self.batchnorm = BatchNormalization(name=name+"-batchnorm") if batchnorm else None
         if self.dilation > 1:
             if not up:
-                self.dilation_layer = MaxPooling2D(dilation, name=name+"-maxpool")
+                # self.dilation_layer = MaxPooling2D(dilation, name=name+"-maxpool")
+                self.dilation_layer = AveragePooling2D(dilation, name=name+"-avgpool")
             else:
-                self.dilation_layer = UpSampling2D(dilation, name=name+"-upsample")
+                self.dilation_layer = UpSampling2D(dilation, interpolation='bilinear',
+                     name=name+"-upsample")
     
     def call(self, x):
         # dilation is split up so as to reduce computation when possible, and skip the 
