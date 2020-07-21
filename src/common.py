@@ -41,22 +41,34 @@ class RemoveChannels(Layer):
     def call(self, x):
         return self.reshape(x)
 
+
 class Scale(Layer):
     """
     scale output by a single learnable value
     """
 
-    def __init__(self, initial_factor=1.0, **kwargs):
+    def __init__(self, initial_factor=1.0, use_bias=False, **kwargs):
         super().__init__(**kwargs)
         assert isinstance(initial_factor, (int, float))
-        initial_factor = float(initial_factor)
-        self.initial_factor = initial_factor
-        self.w = tf.Variable(
-            initial_value=initial_factor,
-            trainable=True,
+        self.initial_factor = float(initial_factor)
+        self.use_bias = use_bias
+
+        w_init = lambda shape, dtype=None: self.initial_factor
+        self.w = self.add_weight(
+            shape=None,
+            initializer=w_init,
+            trainable=True
         )
+        if use_bias:
+            b_init = lambda shape, dtype=None: 0.0
+            self.b = self.add_weight(
+                shape=None,
+                initializer=b_init
+            )
     
     def call(self, x):
+        if self.use_bias:
+            return self.w * x + self.b
         return self.w * x
     
     def get_config(self):
@@ -69,7 +81,8 @@ class Scale(Layer):
 
 CUSTOM_OBJ_DICT = {
     "AddChannels": AddChannels,
-    "RemoveChannels": RemoveChannels
+    "RemoveChannels": RemoveChannels,
+    "Scale": Scale,
 }
 
 class BaseAE(abc.ABC):

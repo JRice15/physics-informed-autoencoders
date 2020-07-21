@@ -184,8 +184,12 @@ class ConvEncoder(ConvAutoencoderBlock):
         self.encoded_shape = None # computed during call
         self.make_conv_layers(up=False)
 
+        self.add_channels = AddChannels()
+        if not self.conv_dynamics:
+            self.flattener = Flatten()
+
     def call(self, x):
-        x = AddChannels()(x)
+        x = self.add_channels(x)
 
         # call each dynamically created block
         for i in range(self.depth):
@@ -196,7 +200,7 @@ class ConvEncoder(ConvAutoencoderBlock):
         if self.encoded_shape is None:
             self.encoded_shape = x.shape[1:]
         if not self.conv_dynamics:
-            x = Flatten()(x)
+            x = self.flattener(x)
 
         return x
 
@@ -216,13 +220,20 @@ class ConvDecoder(ConvAutoencoderBlock):
         self.encoded_shape = encoded_shape
         self.make_conv_layers(up=True)
 
+        if not self.conv_dynamics:
+            self.unflatten = Reshape(self.encoded_shape)
+        self.pad = ZeroPadding2D([[0,1],[0,1]])
+        self.crop = CropToTarget(self.target_shape)
+        self.rm_channels = RemoveChannels()
+        self.scale = Scale(1.0, name="decoder-scale")
+
     def call(self, x, withshape=False):
         if not self.conv_dynamics:
             # unflatten (this automatically adds channels)
-            x = Reshape(self.encoded_shape)(x)
+            x = self.unflatten(x)
         # add 1 row and column so that we end up with shape larger than or 
         # equal to the target
-        x = ZeroPadding2D([[0,1],[0,1]])(x)
+        x = self.pad(x)
 
         # call each dynamically created block
         for i in range(self.depth):
@@ -230,11 +241,11 @@ class ConvDecoder(ConvAutoencoderBlock):
             x = block(x)
 
         # get rid of any extra rows/cols from the zero padding
-        x = CropToTarget(self.target_shape)(x)
-        x = RemoveChannels()(x)
+        x = self.crop(x)
+        x = self.rm_channels(x)
 
-        x = Scale(1.0)(x)
-
+        # final scaling
+        x = self.scale(x)
         return x
     
     def get_config(self):
