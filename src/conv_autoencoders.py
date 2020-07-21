@@ -76,8 +76,8 @@ class ConvDilateLayer(Layer):
         self.batchnorm = BatchNormalization(name=name+"-batchnorm") if batchnorm else None
         if self.dilation > 1:
             if not up:
-                # self.dilation_layer = MaxPooling2D(dilation, name=name+"-maxpool")
-                self.dilation_layer = AveragePooling2D(dilation, name=name+"-avgpool")
+                self.dilation_layer = MaxPooling2D(dilation, name=name+"-maxpool")
+                # self.dilation_layer = AveragePooling2D(dilation, name=name+"-avgpool")
             else:
                 self.dilation_layer = UpSampling2D(dilation, interpolation='bilinear',
                      name=name+"-upsample")
