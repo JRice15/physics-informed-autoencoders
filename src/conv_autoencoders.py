@@ -225,7 +225,7 @@ class ConvDecoder(ConvAutoencoderBlock):
         self.pad = ZeroPadding2D([[0,1],[0,1]])
         self.crop = CropToTarget(self.target_shape)
         self.rm_channels = RemoveChannels()
-        self.scale = Scale(1.0, name="decoder-scale")
+        # self.scale = Scale(1.0, name="decoder-scale")
 
     def call(self, x, withshape=False):
         if not self.conv_dynamics:
@@ -245,7 +245,7 @@ class ConvDecoder(ConvAutoencoderBlock):
         x = self.rm_channels(x)
 
         # final scaling
-        x = self.scale(x)
+        # x = self.scale(x)
         return x
     
     def get_config(self):

@@ -126,8 +126,7 @@ if args.conv_dynamics and not args.convolutional:
 
 # echo args
 for k,v in args.__dict__.items():
-    if v is not None:
-        print("    " + k + ":", v, type(v))
+    print("    " + k + ":", v, type(v))
 
 # allow hyperparamater saving/loading
 if args.save:

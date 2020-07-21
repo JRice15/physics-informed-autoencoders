@@ -42,6 +42,10 @@ args = parser.parse_args()
 if args.load_last and args.file:
     raise ValueError("load-last and file args are incompatible")
 
+# echo args
+for k,v in args.__dict__.items():
+    print("    " + k + ":", v, type(v))
+
 set_seed(args.seed)
 os.makedirs("test_results/truth",exist_ok=True)
 
@@ -213,8 +217,17 @@ if args.quick:
     fullname += ".q"
 
 
-final_mses = [i[-1] for i in relpred_avgs]
-mark = final_mses.index(min(final_mses))
+final_relpreds = [i[-1] for i in relpred_avgs]
+mark = final_relpreds.index(min(final_relpreds))
+
+stats = [np.min(final_relpreds), np.mean(final_relpreds), np.max(final_relpreds)]
+print("Min final relative prediction err:", stats[0])
+print("Avg final relative prediction err:", stats[1])
+print("Max final relative prediction err:", stats[2])
+
+with open("test_results/" + fullname + ".stats.tsv", "w") as f:
+    f.write("Min\tAvg\tMax\n")
+    f.write("\t".join([str(i) for i in stats]) + "\n")
 
 # MSE
 make_plot(xrange=step_arr, data=tuple(mse_avgs), dnames=names, title="Prediction MSE -- " + args.dataset, 
