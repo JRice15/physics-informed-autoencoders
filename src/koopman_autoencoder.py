@@ -204,7 +204,7 @@ class KoopmanAutoencoder(BaseAE):
         inshape = self.encoder(current).shape[1:] # remove batch size
         print("\n\ndynamics shape:", inshape)
         if conv_dynamics:
-            self.forward = Conv2D(1, 9, padding="same", use_bias=False, name="forward-dynamics-conv",
+            self.forward = Conv2D(1, 5, padding="same", use_bias=False, name="forward-dynamics-conv",
                 kernel_initializer=DynamicsInitializer(), kernel_regularizer=regularizers.l2(weight_decay))
         else:
             self.forward = Dense(inshape[-1], use_bias=False, name="forward-dynamics-dense",
