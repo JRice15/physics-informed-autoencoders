@@ -41,6 +41,32 @@ class RemoveChannels(Layer):
     def call(self, x):
         return self.reshape(x)
 
+class Scale(Layer):
+    """
+    scale output by a single learnable value
+    """
+
+    def __init__(self, initial_factor=1.0, **kwargs):
+        super().__init__(**kwargs)
+        assert isinstance(initial_factor, (int, float))
+        initial_factor = float(initial_factor)
+        self.initial_factor = initial_factor
+        self.w = tf.Variable(
+            initial_value=initial_factor,
+            trainable=True,
+        )
+    
+    def call(self, x):
+        return self.w * x
+    
+    def get_config(self):
+        config = super().get_config()
+        config.update({
+            "initial_factor": self.initial_factor
+        })
+        return config
+
+
 CUSTOM_OBJ_DICT = {
     "AddChannels": AddChannels,
     "RemoveChannels": RemoveChannels

@@ -233,6 +233,8 @@ class ConvDecoder(ConvAutoencoderBlock):
         x = CropToTarget(self.target_shape)(x)
         x = RemoveChannels()(x)
 
+        x = Scale(1.0)(x)
+
         return x
     
     def get_config(self):
