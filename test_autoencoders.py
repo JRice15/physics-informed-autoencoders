@@ -135,7 +135,7 @@ def run_one_test(model_path, data, num_steps, step_arr):
 
             if (step % 10 == 0 or step in (1,3,5)) and i == dataset.write_index:
                 dataset.write_im(pred, title=str(step) + " steps prediction", 
-                    filename="pred_step" + str(step), directory="test_results/"+dirname )
+                    filename="pred_step" + str(step), directory="test_results/preds/"+dirname )
                 truthfile = "test_results/truth/" + dataset.dataname + ".truth_step" + str(step) + ".png"
                 if not os.path.exists(truthfile):
                     dataset.write_im(true, title=str(step) + " steps ground truth", 

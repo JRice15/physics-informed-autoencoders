@@ -10,13 +10,13 @@
   "batchsize": 64,
   "depth": 4,
   "dilations": [
-    1,
     2,
-    3,
-    2
+    2,
+    2,
+    1
   ],
   "filters": [
-    6,
+    3,
     6,
     6
   ],
@@ -24,7 +24,7 @@
     3,
     3,
     5,
-    3
+    5
   ],
   "fwd_steps": 8,
   "bwd_steps": 8,
