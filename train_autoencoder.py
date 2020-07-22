@@ -41,7 +41,7 @@ def make_dirs(dirname):
 # Get model and dataset first
 parser = argparse.ArgumentParser(description="Select model first")
 parser.add_argument("--model",required=True,choices=["koopman","lyapunov"],help="name of the model to use")
-parser.add_argument("--dataset",type=str,default="flow_cylinder",help="name of dataset")
+parser.add_argument("--dataset",required=True,type=str,help="name of dataset")
 parser.add_argument("--convolutional",action="store_true",default=False,help="create a convolutional model")
 
 args, unknown = parser.parse_known_args()

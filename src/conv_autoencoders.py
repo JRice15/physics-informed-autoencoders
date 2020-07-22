@@ -67,6 +67,7 @@ class ConvDilateLayer(Layer):
         self.conv = conv_layer(
             filters=filters,
             kernel_size=kernel_size,
+            strides=dilation,
             kernel_initializer=glorot_normal(), # aka Xavier Normal
             bias_initializer=zeros(),
             kernel_regularizer=regularizers.l2(weight_decay), # weight decay
@@ -74,26 +75,26 @@ class ConvDilateLayer(Layer):
         )
         self.activation = Activation(tanh, name=name+"-tanh") if activate else None
         self.batchnorm = BatchNormalization(name=name+"-batchnorm") if batchnorm else None
-        if self.dilation > 1:
-            if not up:
-                self.dilation_layer = MaxPooling2D(dilation, name=name+"-maxpool")
-                # self.dilation_layer = AveragePooling2D(dilation, name=name+"-avgpool")
-            else:
-                self.dilation_layer = UpSampling2D(dilation, interpolation='bilinear',
-                     name=name+"-upsample")
+        # if self.dilation > 1:
+        #     if not up:
+        #         self.dilation_layer = MaxPooling2D(dilation, name=name+"-maxpool")
+        #         # self.dilation_layer = AveragePooling2D(dilation, name=name+"-avgpool")
+        #     else:
+        #         self.dilation_layer = UpSampling2D(dilation, interpolation='bilinear',
+        #              name=name+"-upsample")
     
     def call(self, x):
         # dilation is split up so as to reduce computation when possible, and skip the 
         # layer when dilation == 1
         x = self.conv(x)
-        if not self.up and self.dilation > 1:
-            x = self.dilation_layer(x)
+        # if not self.up and self.dilation > 1:
+        #     x = self.dilation_layer(x)
         if self.activation is not None:
             x = self.activation(x)
         if self.batchnorm is not None:
             x = self.batchnorm(x)
-        if self.up and self.dilation > 1:
-            x = self.dilation_layer(x)
+        # if self.up and self.dilation > 1:
+        #     x = self.dilation_layer(x)
         return x
     
     def get_config(self):
