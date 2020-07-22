@@ -11,21 +11,21 @@ from mpl_toolkits.basemap import Basemap
 
 
 
-def data_from_name(name, flat):
+def data_from_name(name, flat, **kwargs):
     """
     convert multiple forms of dataset names to one canonical short name
     """
     # get rid of dashes and underscores to match easier
     filtered_name = re.sub(r"[-_]", "", name.lower().strip())
     if filtered_name in ("cylinder", "flowcylinder"):
-        return FlowCylinder(flat)
+        return FlowCylinder(flat, **kwargs)
     if filtered_name in ("cylinderfull", "flowcylinderfull"):
-        return FlowCylinder(flat, full=True)
+        return FlowCylinder(flat, full=True, **kwargs)
     if filtered_name in ("sst", "seasurfacetemp", "seasurfacetemperature"):
-        return SST(flat, full=False)
+        return SST(flat, full=False, **kwargs)
     if filtered_name in ("sstfull", "fullsst"):
-        return SST(flat, full=True)
-    raise ValueError("Unknown dataset " + name)
+        return SST(flat, full=True, **kwargs)
+    raise ValueError("Unknown dataset '" + str(name) + "'")
 
 
 
@@ -56,7 +56,7 @@ class CustomDataset(abc.ABC):
 
 class FlowCylinder(CustomDataset):
 
-    def __init__(self, flat, full=False):
+    def __init__(self, flat, full=False, **kwargs):
         self.full = full
         self.flat = flat
 
@@ -129,7 +129,7 @@ class FlowCylinder(CustomDataset):
 
 class SST(CustomDataset):
 
-    def __init__(self, flat, full=False):
+    def __init__(self, flat, full=False, full_test=False, **kwargs):
         self.flat = flat
         self.full = full
 
@@ -150,7 +150,11 @@ class SST(CustomDataset):
         indices = range(3600)
         #training_idx, test_idx = indices[:730], indices[730:1000] 
         # 3 years, 1 years
-        training_idx, test_idx = indices[220:1315], indices[1315:1680]
+        training_idx = indices[220:1315]
+        if full_test:
+            test_idx = indices[1315:2557] # 3 years, for testing
+        else:
+            test_idx = indices[1315:1680] # 1 year, for training
         #training_idx, test_idx = indices[230:2420], indices[2420:2557] # 6 years
         #training_idx, test_idx = indices[0:1825], indices[1825:2557] # 5 years    
         #training_idx, test_idx = indices[230:1325], indices[1325:2000] # 3 years

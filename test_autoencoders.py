@@ -72,8 +72,8 @@ def get_pipeline(model):
 
 
 # Read Data
-dataset = data_from_name(args.dataset, (not args.convolutional))
-data = np.concatenate([dataset.X, dataset.Xtest], axis=0)
+dataset = data_from_name(args.dataset, flat=(not args.convolutional), full_test=True)
+data = dataset.Xtest
 
 print("data shape:", data.shape)
 
@@ -91,7 +91,7 @@ def run_one_test(model_path, data, num_steps, step_arr):
     encoder, dynamics, decoder = get_pipeline(autoencoder)
 
     dirname = run_name_from_model_path(model_path)
-    os.makedirs("test_results/" + dirname, exist_ok=True)
+    os.makedirs("test_results/preds/" + dirname, exist_ok=True)
 
     shape = data.shape
     num_snapshots = shape[0]
