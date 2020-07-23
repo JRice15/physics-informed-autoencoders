@@ -179,7 +179,7 @@ callbacks = [
 ]
 if not args.no_earlystopping:
     callbacks.append(
-        EarlyStopping(min_delta=1e-5, patience=round(args.epochs // 5 * 1.5), mode="min",
+        EarlyStopping(min_delta=1e-5, patience=round(args.epochs // 5 * 1.25), mode="min",
             verbose=1))
 if args.tboard:
     callbacks.append(TensorBoard(histogram_freq=100, write_graph=True, write_images=True, 
