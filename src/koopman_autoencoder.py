@@ -162,7 +162,7 @@ class KoopmanAutoencoder(BaseAE):
     
     def build_enc_dec(self, args, input_shape):
         if args.convolutional:
-            self.encoder = ConvEncoder(args.depth, args.dilations, args.kernel_sizes, 
+            self.encoder = ConvEncoder(args.activation, args.depth, args.dilations, args.kernel_sizes, 
                 args.filters, args.wd, conv_dynamics=args.conv_dynamics)
 
             # build encoder, get encoded (pre-flattened) shape
@@ -170,7 +170,7 @@ class KoopmanAutoencoder(BaseAE):
             encoded_shape = self.encoder.encoded_shape
 
             # create decoder (with reversed kernels, reversed and inverse dilations)
-            self.decoder = ConvDecoder(args.depth, args.dilations[::-1], args.kernel_sizes[::-1],
+            self.decoder = ConvDecoder(args.activation, args.depth, args.dilations[::-1], args.kernel_sizes[::-1],
                 args.filters, args.wd, conv_dynamics=args.conv_dynamics, encoded_shape=encoded_shape, 
                 target_shape=input_shape)
 

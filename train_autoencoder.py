@@ -90,6 +90,7 @@ parser.add_argument("--gradclip",type=float,default=defaults["gradclip"],help="g
 parser.add_argument("--seed",type=int,default=0,help="random seed")
 parser.add_argument("--epochs",type=int,default=defaults["epochs"])
 parser.add_argument("--batchsize",type=int,default=defaults["batchsize"])
+parser.add_argument("--activation",type=str,default="tanh",help="name of activation to use")
 
 parser.add_argument("--tboard",action="store_true",default=False,help="run tensorboard")
 parser.add_argument("--summary",action="store_true",default=False,help="show model summary")
@@ -214,14 +215,11 @@ start_time = time.time()
 
 H = autoencoder.train(callbacks)
 
+epochs_ran = len(H.history["loss"])
 print("Training took {0} minutes".format((time.time() - start_time)/60))
-print("{0} seconds per epoch".format((time.time() - start_time)/args.epochs))
+print("{0} seconds per epoch".format((time.time() - start_time)/epochs_ran))
 
-if 7000 >= args.epochs >= 3000:
-    marker_step = 1000
-else:
-    marker_step = args.epochs // 5
-
+marker_step = epochs_ran // 5
 save_history(H, run_name, marker_step=marker_step)
 
 autoencoder.save_eigenvals()

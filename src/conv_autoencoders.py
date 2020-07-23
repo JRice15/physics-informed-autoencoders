@@ -54,7 +54,7 @@ class ConvDilateLayer(Layer):
         dilation (int|float): >1 results in pooling, <1 results in upsampling by 1/dilation
     """
 
-    def __init__(self, up, name, filters, kernel_size, dilation, weight_decay, activate=True, 
+    def __init__(self, up, activation, name, filters, kernel_size, dilation, weight_decay, activate=True, 
             batchnorm=False, **kwargs):
         super().__init__(name=name, **kwargs)
         self.up = up
@@ -62,39 +62,40 @@ class ConvDilateLayer(Layer):
         self.kernel_size = kernel_size
         self.dilation = dilation
         self.filters = filters
+        self.activation_name = activation
 
         conv_layer = Conv2DTranspose if up else Conv2D
         self.conv = conv_layer(
             filters=filters,
             kernel_size=kernel_size,
-            strides=dilation,
+            # strides=dilation,
             kernel_initializer=glorot_normal(), # aka Xavier Normal
             bias_initializer=zeros(),
             kernel_regularizer=regularizers.l2(weight_decay), # weight decay
             name=name+"-conv"
         )
-        self.activation = Activation(tanh, name=name+"-tanh") if activate else None
+        self.activation = get_activation(activation, name) if activate else None
         self.batchnorm = BatchNormalization(name=name+"-batchnorm") if batchnorm else None
-        # if self.dilation > 1:
-        #     if not up:
-        #         self.dilation_layer = MaxPooling2D(dilation, name=name+"-maxpool")
-        #         # self.dilation_layer = AveragePooling2D(dilation, name=name+"-avgpool")
-        #     else:
-        #         self.dilation_layer = UpSampling2D(dilation, interpolation='bilinear',
-        #              name=name+"-upsample")
+        if self.dilation > 1:
+            if not up:
+                self.dilation_layer = MaxPooling2D(dilation, name=name+"-maxpool")
+                # self.dilation_layer = AveragePooling2D(dilation, name=name+"-avgpool")
+            else:
+                self.dilation_layer = UpSampling2D(dilation, interpolation='bilinear',
+                     name=name+"-upsample")
     
     def call(self, x):
         # dilation is split up so as to reduce computation when possible, and skip the 
         # layer when dilation == 1
         x = self.conv(x)
-        # if not self.up and self.dilation > 1:
-        #     x = self.dilation_layer(x)
+        if not self.up and self.dilation > 1:
+            x = self.dilation_layer(x)
         if self.activation is not None:
             x = self.activation(x)
         if self.batchnorm is not None:
             x = self.batchnorm(x)
-        # if self.up and self.dilation > 1:
-        #     x = self.dilation_layer(x)
+        if self.up and self.dilation > 1:
+            x = self.dilation_layer(x)
         return x
     
     def get_config(self):
@@ -106,6 +107,7 @@ class ConvDilateLayer(Layer):
             "dilation": self.dilation,
             "activate": self.activation is not None,
             "batchnorm": self.batchnorm is not None,
+            "activation": self.activation_name,
             "up": self.up
         })
         return config
@@ -124,10 +126,11 @@ class ConvAutoencoderBlock(Layer, abc.ABC):
     base class for encoder and decoder conv layers
     """
 
-    def __init__(self, depth, dilations, kernel_sizes, filters, weight_decay, name, conv_dynamics, 
+    def __init__(self, activation, depth, dilations, kernel_sizes, filters, weight_decay, name, conv_dynamics, 
             activate_last=False, batchnorm_last=False, **kwargs):
         super().__init__(name=name, **kwargs)
         assert len(kernel_sizes) == len(dilations) == depth
+        self.activation_name = activation
         self.depth = depth
         self.dilations = dilations
         self.kernel_sizes = kernel_sizes
@@ -140,7 +143,7 @@ class ConvAutoencoderBlock(Layer, abc.ABC):
     def make_conv_layers(self, up):
         # create first depth-1 layers dynamically
         for i in range(self.depth-1):
-            conv = ConvDilateLayer(up=up, name=self.name+str(i), filters=self.filters[i], 
+            conv = ConvDilateLayer(up=up, activation=activation, name=self.name+str(i), filters=self.filters[i], 
                 kernel_size=self.kernel_sizes[i], dilation=self.dilations[i], 
                 weight_decay=self.weight_decay)
             setattr(self, "block"+str(i), conv)
@@ -155,6 +158,7 @@ class ConvAutoencoderBlock(Layer, abc.ABC):
     def get_config(self):
         config = super().get_config()
         config.update({
+            "activation": self.activation_name,
             "depth": self.depth,
             "dilations": self.dilations,
             "kernel_sizes": self.kernel_sizes,
@@ -176,9 +180,9 @@ class ConvEncoder(ConvAutoencoderBlock):
     variable depth convolutional encoder
     """
 
-    def __init__(self, depth, dilations, kernel_sizes, filters, weight_decay, conv_dynamics, activate_last=False, 
+    def __init__(self, activation, depth, dilations, kernel_sizes, filters, weight_decay, conv_dynamics, activate_last=False, 
             batchnorm_last=False, name="encoder", **kwargs):
-        super().__init__(name=name, depth=depth, dilations=dilations, kernel_sizes=kernel_sizes, 
+        super().__init__(name=name, activation=activation, depth=depth, dilations=dilations, kernel_sizes=kernel_sizes, 
             weight_decay=weight_decay, activate_last=activate_last, batchnorm_last=batchnorm_last, 
             conv_dynamics=conv_dynamics, filters=filters, **kwargs)
 
@@ -211,9 +215,9 @@ class ConvDecoder(ConvAutoencoderBlock):
     variable depth convolutional decoder
     """
 
-    def __init__(self, depth, dilations, kernel_sizes, filters, weight_decay, conv_dynamics, activate_last=False, 
+    def __init__(self, activation, depth, dilations, kernel_sizes, filters, weight_decay, conv_dynamics, activate_last=False, 
             batchnorm_last=False, target_shape=None, encoded_shape=None, name="decoder", **kwargs):
-        super().__init__(name=name, depth=depth, dilations=dilations, kernel_sizes=kernel_sizes, 
+        super().__init__(name=name, activation=activation, depth=depth, dilations=dilations, kernel_sizes=kernel_sizes, 
             weight_decay=weight_decay, activate_last=activate_last, batchnorm_last=batchnorm_last, 
             conv_dynamics=conv_dynamics, filters=filters, **kwargs)
 

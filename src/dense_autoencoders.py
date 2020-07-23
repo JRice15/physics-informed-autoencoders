@@ -1,5 +1,5 @@
-import sys
 import abc
+import sys
 
 import keras.backend as K
 import numpy as np
@@ -10,13 +10,12 @@ from keras.initializers import glorot_normal, zeros
 from keras.layers import (Activation, Add, BatchNormalization, Concatenate,
                           Conv2D, Cropping2D, Dense, Dropout,
                           GlobalAveragePooling2D, GlobalMaxPooling2D, Lambda,
-                          Layer, LeakyReLU, MaxPooling2D, ReLU, Reshape,
+                          Layer, LeakyReLU, MaxPooling2D, PReLU, ReLU, Reshape,
                           Softmax, Subtract, UpSampling2D, ZeroPadding2D, add)
 from keras.models import Model
 
 from src.common import *
 from src.read_dataset import *
-
 
 
 class FullyConnectedBlock(Layer):
@@ -25,10 +24,11 @@ class FullyConnectedBlock(Layer):
     """
 
     def __init__(self, name, output_dims, weight_decay, activate=True, 
-            batchnorm=False, **kwargs):
+            batchnorm=False, activation_name=None, activation=None, **kwargs):
         super().__init__(name=name, **kwargs)
         self.output_dims = output_dims
         self.weight_decay = weight_decay
+        self.activation_name = activation
 
         self.dense = Dense(output_dims,
             kernel_initializer=glorot_normal(), # aka Xavier Normal
@@ -39,7 +39,7 @@ class FullyConnectedBlock(Layer):
         self.activation = None
         self.batchnorm = None
         if activate:
-            self.activation = Activation(tanh, name=name+"-tanh")
+            self.activation = get_activation(activation, name=name)
         if batchnorm:
             self.batchnorm = BatchNormalization(name=name+"-batchnorm")
     
@@ -58,6 +58,7 @@ class FullyConnectedBlock(Layer):
             "weight_decay": self.weight_decay,
             "activate": self.activation is not None,
             "batchnorm": self.batchnorm is not None,
+            "activation_name": self.activation_name,
         })
         return config
 
@@ -67,18 +68,19 @@ class DenseAutoencoderBlock(Layer):
     block of 3 fully connected layers, either for encoder or decoder
     """
 
-    def __init__(self, sizes, weight_decay, name, activate_last=False, 
+    def __init__(self, activation, sizes, weight_decay, name, activate_last=False, 
             batchnorm_last=False, **kwargs):
         super().__init__(name=name, **kwargs)
         self.sizes = sizes
         self.weight_decay = weight_decay
         self.activate_last = activate_last
         self.batchnorm_last = batchnorm_last
+        self.activation_name = activation
 
-        self.block1 = FullyConnectedBlock(name+"1", sizes[0], weight_decay)
-        self.block2 = FullyConnectedBlock(name+"2", sizes[1], weight_decay)
+        self.block1 = FullyConnectedBlock(name+"1", sizes[0], weight_decay, activation=activation)
+        self.block2 = FullyConnectedBlock(name+"2", sizes[1], weight_decay, activation=activation)
         self.block3 = FullyConnectedBlock(name+"3", sizes[2], weight_decay,
-            activate=activate_last, batchnorm=batchnorm_last)
+            activate=activate_last, batchnorm=batchnorm_last, activation=activation)
 
     def call(self, x):
         x = self.block1(x)
@@ -93,6 +95,7 @@ class DenseAutoencoderBlock(Layer):
             "weight_decay": self.weight_decay,
             "activate_last": self.activate_last,
             "batchnorm_last": self.batchnorm_last,
+            "activation": self.activation_name
         })
         return config
 

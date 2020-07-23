@@ -1,6 +1,7 @@
 import abc
 import math
 import sys
+import re
 
 import keras.backend as K
 import numpy as np
@@ -13,7 +14,7 @@ from keras.layers import (Activation, Add, BatchNormalization, Concatenate,
                           Flatten, GlobalAveragePooling2D, GlobalMaxPooling2D,
                           Lambda, Layer, LeakyReLU, MaxPooling2D, ReLU,
                           Reshape, Softmax, Subtract, UpSampling2D,
-                          ZeroPadding2D, add)
+                          ZeroPadding2D, add, PReLU)
 from keras.models import Model
 
 
@@ -156,16 +157,20 @@ def set_seed(seed):
 
 def get_activation(act_name, name):
     act_name = act_name.lower().strip()
+    act_name = re.sub(r"\s", "", act_name)
+    act_name = re.sub(r"[_-]", "", act_name)
     if act_name == "tanh":
-        return Activation(activations.tanh, name=name)
+        return Activation(activations.tanh, name=name+"-tanh")
     if act_name == "relu":
-        return Activation(activations.relu, name=name)
+        return Activation(activations.relu, name=name+"-relu")
     if act_name in ("lrelu", "leakyrelu"):
-        return LeakyReLU(0.2, name=name)
+        return LeakyReLU(0.2, name=name+"-lrelu")
+    if act_name in ("prelu", "parametricrelu"):
+        return PReLU(name=name+"-prelu")
     if act_name in ("sig", "sigmoid"):
-        return Activation(activations.sigmoid, name=name)
+        return Activation(activations.sigmoid, name=name+"-sigmoid")
     if act_name == "softplus":
-        return Activation(activations.softplus, name=name)
+        return Activation(activations.softplus, name=name+"-softplus")
     
     raise ValueError("Bad activation name '{}'".format(act_name))
 
@@ -192,6 +197,7 @@ def vis_model(model: Model):
     for i in model.layers:
         if not any([i.name.startswith(j) for j in unimportant_names]):
             vis_layer(i, 2)
+
 
 def vis_layer(layer: Layer, indent):
     try:
