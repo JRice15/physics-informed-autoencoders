@@ -30,11 +30,11 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument("--name",required=True,help="name of this test")
 parser.add_argument("--dataset",required=True,help="name of the dataset to use")
-parser.add_argument("--pred-steps",type=int,default=50,help="number of timesteps to predict")
+parser.add_argument("--pred-steps",type=int,default=180,help="number of timesteps to predict")
 parser.add_argument("--file",default=None,help="file with weights paths to compare. Each line should be: '<name><tab-character><weights path>'")
 parser.add_argument("--convolutional",action="store_true",default=False,help="whether to test convolutional models")
 parser.add_argument("--seed",type=int,default=0)
-parser.add_argument("--quick",action="store_true",default=False,help="whether to just test steps 1,3,5,10,20,30,...")
+parser.add_argument("--no-quick",action="store_true",default=False,help="whether to just test steps 1,3,5,10,20,30,...")
 parser.add_argument("--load-last",action="store_true",default=False,help="reload data of last training run")
 
 args = parser.parse_args()
@@ -162,8 +162,15 @@ def run_one_test(model_path, data, num_steps, step_arr):
 if args.file is not None:
     # File mode
     with open(args.file, "r") as f:
-        lines = f.readlines()
-    lines = [i.split("\t",maxsplit=1) for i in lines]
+        filelines = f.readlines()
+    filelines = [i.strip() for i in filelines]
+    filelines = [i for i in filelines if i != ""]
+    lines = [i.split("\t",maxsplit=1) for i in filelines]
+    if any([len(i) < 2 for i in lines]):
+        lines = [re.split(r"\s{2,}", i, maxsplit=1) for i in filelines]
+        if any([len(i) < 2 for i in lines]):
+            print(lines)
+            raise ValueError("Bad file format, see parsed lines above")
     names = [i[0].strip() for i in lines]
     paths = [i[1].strip() for i in lines]
     
@@ -187,7 +194,7 @@ elif not args.load_last:
         paths.append(model_path)
         names.append(name)
 
-if args.quick:
+if not args.no_quick:
     step_arr = [1,3,5] + list(range(10,args.pred_steps+1,10))
 else:
     step_arr = range(1, args.pred_steps+1)
@@ -215,7 +222,7 @@ fullname = args.name + "." + dataset.dataname
 if args.convolutional:
     fullname += ".conv"
 fullname += "." + str(args.pred_steps)
-if args.quick:
+if not args.no_quick:
     fullname += ".q"
 
 
