@@ -144,12 +144,16 @@ def make_plot(xrange, data, title, axlabels, dnames=None, marker_step=1,
     """
     assert isinstance(data, tuple)
 
+    global_min = 1e20
     mark_data = None
     for i in range(len(data)):
         if data[i] is None:
             continue
         if i == mark:
             mark_data = data[i]
+        thismin = np.min(data[i])
+        if thismin < global_min:
+            global_min = thismin
         plt.plot(xrange, data[i])
         if fillbetweens is not None:
             plt.fill_between(xrange, fillbetweens[i][0], fillbetweens[i][1], alpha=0.15)
@@ -185,9 +189,12 @@ def make_plot(xrange, data, title, axlabels, dnames=None, marker_step=1,
         dnames = [i for i in dnames if i is not None]
         plt.legend(dnames, loc=legendloc)
 
+    _, current_top = plt.ylim()
     if ylim is not None:
-        _, current = plt.ylim()
-        plt.ylim(top=min(ylim, current))
+        current_top = min(ylim, current_top)
+        plt.ylim(top=current_top)
+    global_min = global_min - (0.03 * abs(current_top - global_min))
+    plt.ylim(bottom=global_min)
 
     plt.margins(x=0.125, y=0.1)
 

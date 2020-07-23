@@ -132,9 +132,9 @@ class LyapunovAutoencoder(BaseAE):
             raise NotImplementedError("convolutional lyapunov not implemented yet")
         else:
             large, medium, small = args.sizes
-            self.encoder = DenseAutoencoderBlock(args.convolutional, (large, medium, small), args.wd, name="encoder", 
+            self.encoder = DenseAutoencoderBlock(args.activation, (large, medium, small), args.wd, name="encoder", 
                 batchnorm_last=True)
-            self.decoder = DenseAutoencoderBlock(args.convolutional, (medium, large, output_dims), args.wd,
+            self.decoder = DenseAutoencoderBlock(args.activation, (medium, large, output_dims), args.wd,
                 name="decoder")
 
     def build_model(self, snapshot_shape, output_dims, lambda_, kappa, gamma,
