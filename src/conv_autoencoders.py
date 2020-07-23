@@ -143,14 +143,14 @@ class ConvAutoencoderBlock(Layer, abc.ABC):
     def make_conv_layers(self, up):
         # create first depth-1 layers dynamically
         for i in range(self.depth-1):
-            conv = ConvDilateLayer(up=up, activation=activation, name=self.name+str(i), filters=self.filters[i], 
+            conv = ConvDilateLayer(up=up, activation=self.activation_name, name=self.name+str(i), filters=self.filters[i], 
                 kernel_size=self.kernel_sizes[i], dilation=self.dilations[i], 
                 weight_decay=self.weight_decay)
             setattr(self, "block"+str(i), conv)
 
         # final layer
         i = self.depth - 1
-        conv = ConvDilateLayer(up=up, name=self.name+str(i), filters=1, kernel_size=self.kernel_sizes[i], 
+        conv = ConvDilateLayer(up=up, activation=self.activation_name, name=self.name+str(i), filters=1, kernel_size=self.kernel_sizes[i], 
             dilation=self.dilations[i], weight_decay=self.weight_decay, activate=self.activate_last,
             batchnorm=self.batchnorm_last)
         setattr(self, "block"+str(i), conv)
