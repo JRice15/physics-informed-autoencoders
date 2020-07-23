@@ -177,9 +177,9 @@ class KoopmanAutoencoder(BaseAE):
         else:
             intermediate, bottleneck = args.sizes
 
-            self.encoder = DenseAutoencoderBlock((intermediate, intermediate, bottleneck), 
+            self.encoder = DenseAutoencoderBlock(args.activation, (intermediate, intermediate, bottleneck), 
                 args.wd, name="encoder")
-            self.decoder = DenseAutoencoderBlock((intermediate, intermediate, input_shape[-1]), 
+            self.decoder = DenseAutoencoderBlock(args.activation, (intermediate, intermediate, input_shape[-1]), 
                 args.wd, name="decoder")
 
 
@@ -264,7 +264,7 @@ class KoopmanAutoencoder(BaseAE):
         if args.convolutional:
             run_name += "conv."
         run_name += "{}fs{}bs.".format(args.fwd_steps, args.bwd_steps)
-        run_name += "f{}_b{}_i{}_c{}.".format(args.forward, args.backward, args.identity, args.consistency)
+        run_name += "f{}b{}i{}c{}.".format(args.forward, args.backward, args.identity, args.consistency)
         run_name += self.run_name_common_suffix()
         return run_name
 

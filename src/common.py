@@ -101,7 +101,8 @@ class BaseAE(abc.ABC):
         if args.conv_dynamics:
             run_name += "c-dyn."
         run_name += self.dataset.dataname + "."
-        run_name += "{}ep_{}bs_{}lr_{}wd_{}gc.".format(args.epochs, args.batchsize, args.lr, args.wd, args.gradclip)
+        run_name += get_activation_name(args.activation) + "."
+        run_name += "{}ep{}bs{}lr{}wd{}gc.".format(args.epochs, args.batchsize, args.lr, args.wd, args.gradclip)
         if args.convolutional:
             run_name += "k" + "".join([str(i) for i in args.kernel_sizes])
             run_name += ".d" + "".join([str(i) for i in args.dilations])
@@ -156,21 +157,40 @@ def set_seed(seed):
 
 
 def get_activation(act_name, name):
+    """
+    get activation Layer
+    """
+    act, _ = _get_activation(act_name, name)
+    return act
+
+def get_activation_name(arg_act_name):
+    """
+    get canonical run_name version of activation name
+    """
+    _, name = _get_activation(arg_act_name)
+    return name
+
+def _get_activation(act_name, name=""):
+    """
+    helper to get activation and its name for run_names
+    Returns:
+        Activation, str
+    """
     act_name = act_name.lower().strip()
     act_name = re.sub(r"\s", "", act_name)
     act_name = re.sub(r"[_-]", "", act_name)
     if act_name == "tanh":
-        return Activation(activations.tanh, name=name+"-tanh")
+        return Activation(activations.tanh, name=name+"-tanh"), "tanh"
     if act_name == "relu":
-        return Activation(activations.relu, name=name+"-relu")
+        return Activation(activations.relu, name=name+"-relu"), "relu"
     if act_name in ("lrelu", "leakyrelu"):
-        return LeakyReLU(0.2, name=name+"-lrelu")
+        return LeakyReLU(0.2, name=name+"-lrelu"), "lrelu"
     if act_name in ("prelu", "parametricrelu"):
-        return PReLU(name=name+"-prelu")
+        return PReLU(name=name+"-prelu"), "prelu"
     if act_name in ("sig", "sigmoid"):
-        return Activation(activations.sigmoid, name=name+"-sigmoid")
+        return Activation(activations.sigmoid, name=name+"-sigmoid"), "sig"
     if act_name == "softplus":
-        return Activation(activations.softplus, name=name+"-softplus")
+        return Activation(activations.softplus, name=name+"-softplus"), "softp"
     
     raise ValueError("Bad activation name '{}'".format(act_name))
 
