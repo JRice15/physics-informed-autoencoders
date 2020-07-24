@@ -171,6 +171,7 @@ def lr_schedule(args):
 model_path = "models/model." + run_name + ".hdf5"
 
 callbacks = [
+    History(),
     LearningRateScheduler(lr_schedule(args)),
     ModelCheckpoint(model_path, save_best_only=True, save_weights_only=False, 
         verbose=1, period=min(20, args.epochs//5)),
@@ -213,7 +214,11 @@ print("\n\n\nBegin Training")
 
 start_time = time.time()
 
-H = autoencoder.train(callbacks)
+try:
+    H = autoencoder.train(callbacks)
+except KeyboardInterrupt:
+    for c in callbacks: c.on_train_end()
+    H = callbacks[0]
 
 secs = time.time() - start_time
 epochs_ran = len(H.history["loss"])
