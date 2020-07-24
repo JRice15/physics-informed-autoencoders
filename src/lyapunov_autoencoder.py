@@ -170,7 +170,7 @@ class LyapunovAutoencoder(BaseAE):
     
     def compile_model(self, optimizer):
         self.model.compile(optimizer=optimizer, loss=losses.mse, 
-            metrics=[metrics.MeanSquaredError()])
+            metrics=[metrics.MeanSquaredError(), metrics.MeanAbsoluteError()])
 
     def make_run_name(self):
         args = self.args

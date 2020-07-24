@@ -104,6 +104,9 @@ def run_one_test(model_path, data, num_steps, step_arr):
     mse_min = []
     mse_max = []
     mse_avg = []
+    mae_min = []
+    mae_max = []
+    mae_avg = []
     relpred_min = []
     relpred_max = []
     relpred_avg = []
@@ -120,6 +123,7 @@ def run_one_test(model_path, data, num_steps, step_arr):
     prev_step = 0
     for step in step_arr:
         step_mse = []
+        step_mae = []
         step_relpred_err = []
         for i in range(num_snapshots - num_steps):
 
@@ -129,10 +133,14 @@ def run_one_test(model_path, data, num_steps, step_arr):
             pred = decoder(x[i]).numpy()
             true = data[:,i+step,:]
 
-            mse = np.mean((true - pred) ** 2)
+            diff = pred - true
+            mse = np.mean(diff ** 2)
             step_mse.append(mse)
 
-            relpred_err = np.linalg.norm(pred - true) / np.linalg.norm(true)
+            mae = np.mean(np.abs(diff))
+            step_mae.append(mae)
+
+            relpred_err = np.linalg.norm(diff) / np.linalg.norm(true)
             step_relpred_err.append(relpred_err)
 
             if (step % 10 == 0 or step in (1,3,5)) and i == dataset.write_index:
@@ -146,17 +154,23 @@ def run_one_test(model_path, data, num_steps, step_arr):
         prev_step = step
 
         mean_mse = np.mean(step_mse)
+        mean_mae = np.mean(step_mae)
         mean_relpred_err = np.mean(step_relpred_err)
-        print(step, "steps MSE:", mean_mse, "relative error:", mean_relpred_err)
+        print(step, "steps relative error:", mean_relpred_err, "MSE:", mean_mse, "MAE:", mean_mae)
         mse_avg.append(mean_mse)
+        mae_avg.append(mean_mae)
         relpred_avg.append(mean_relpred_err)
 
         mse_min.append(np.percentile(step_mse, 5))
         mse_max.append(np.percentile(step_mse, 95))
+        mae_min.append(np.percentile(step_mae, 5))
+        mae_max.append(np.percentile(step_mae, 95))
         relpred_min.append(np.percentile(step_relpred_err, 5))
         relpred_max.append(np.percentile(step_relpred_err, 95))
         
-    return mse_min, mse_max, mse_avg, relpred_min, relpred_max, relpred_avg
+    return (mse_min, mse_max, mse_avg, 
+            mae_min, mae_max, mae_avg, 
+            relpred_min, relpred_max, relpred_avg)
 
 
 if args.file is not None:
@@ -201,22 +215,29 @@ else:
 
 
 if args.load_last:
-    mse_avgs, mse_errbounds, relpred_avgs, relpred_errbounds, names = np.load("test_results/lastdata.npy", allow_pickle=True)
+    mse_avgs, mse_errbounds, mae_avgs, mae_errbounds, relpred_avgs, relpred_errbounds, names = \
+        np.load("test_results/lastdata.npy", allow_pickle=True)
 else:
     mse_avgs = []
     mse_errbounds = []
+    mae_avgs = []
+    mae_errbounds = []
     relpred_avgs = []
     relpred_errbounds = []
 
     for p in paths:
-        m_min, m_max, m_avg, r_min, r_max, r_avg = run_one_test(p, data, args.pred_steps, step_arr)
+        m_min, m_max, m_avg, a_min, a_max, a_avg, r_min, r_max, r_avg = run_one_test(p, data, args.pred_steps, step_arr)
         mse_avgs.append(m_avg)
         mse_errbounds.append( (m_min, m_max) )
+        mae_avgs.append(a_avg)
+        mae_errbounds.append( (a_min, a_max) )
         relpred_avgs.append(r_avg)
         relpred_errbounds.append( (r_min, r_max) )
     
-    np.save("test_results/lastdata.npy", [mse_avgs, mse_errbounds, relpred_avgs, relpred_errbounds, names])
+    np.save("test_results/lastdata.npy", [mse_avgs, mse_errbounds, mae_avgs, mae_errbounds, relpred_avgs, relpred_errbounds, names])
 
+if len(mse_avgs) == 0:
+    raise ValueError("No data!")
 
 fullname = args.name + "." + dataset.dataname
 if args.convolutional:
@@ -226,21 +247,34 @@ if not args.no_quick:
     fullname += ".q"
 
 
-final_relpreds = [i[-1] for i in relpred_avgs]
-mark = final_relpreds.index(min(final_relpreds))
+def get_stats(run_avgs, min_ind=False):
+    """
+    make min, avg, max from 
+    """
+    finals = [i[-1] for i in run_avgs]
+    stats = [np.min(finals), np.mean(finals), np.max(finals)]
+    if min_ind:
+        return stats, finals.index(min(finals))
+    return stats
 
-stats = [np.min(final_relpreds), np.mean(final_relpreds), np.max(final_relpreds)]
-print("Min final relative prediction err:", stats[0])
-print("Avg final relative prediction err:", stats[1])
-print("Max final relative prediction err:", stats[2])
-relpred_ylim = max(1, stats[0] * 1.2)
+relpred_stats, mark = get_stats(relpred_avgs, min_ind=True)
+relpred_ylim = max(1, relpred_stats[0] * 1.2)
 
-final_mses = [i[-1] for i in mse_avgs]
-mse_ylim = max(1, np.min(final_mses) * 1.2)
+mse_stats = get_stats(mse_avgs)
+mse_ylim = max(1, np.min(mse_stats[0]) * 1.2)
 
+mae_stats = get_stats(mae_avgs)
+
+print("Min final relative prediction err:", relpred_stats[0])
+print("Avg final relative prediction err:", relpred_stats[1])
+print("Max final relative prediction err:", relpred_stats[2])
+
+relpred_stats[0] = 0
 with open("test_results/" + fullname + ".stats.tsv", "w") as f:
-    f.write("Min\tAvg\tMax\n")
-    f.write("\t".join([str(i) for i in stats]) + "\n")
+    f.write("{:<7} {:<9} {:<9} {:<9}\n".format("", "Min", "Avg", "Max"))
+    f.write("{:<7} {:<7.7f} {:<7.7f} {:<7.7f}\n".format("RelPred", *relpred_stats))
+    f.write("{:<7} {:<7.7f} {:<7.7f} {:<7.7f}\n".format("MSE", *mse_stats))
+    f.write("{:<7} {:<7.7f} {:<7.7f} {:<7.7f}\n".format("MAE", *mae_stats))
 
 # MSE
 make_plot(xrange=step_arr, data=tuple(mse_avgs), dnames=names, title="Prediction MSE -- " + args.dataset, 

@@ -238,7 +238,15 @@ class KoopmanAutoencoder(BaseAE):
         # Forward and Backward Dynamics Regularizers
         fwd_pred = tf.stack(outputs[backward_steps:], axis=1)
         fwd_true = inpt[:,backward_steps+1:,:]
-        fwd_loss = fwd_wt * tf.reduce_mean((fwd_true - fwd_pred) ** 2)
+        fwd_err = (fwd_true - fwd_pred)
+
+        fwd_mse = tf.reduce_mean(fwd_err ** 2)
+        per_pred_fwd_mse = fwd_mse / forward_steps
+        self.model.add_metric(per_pred_fwd_mse, name="fwd_mse", aggregation="mean")
+        per_pred_fwd_mae = tf.reduce_mean(tf.abs(fwd_err)) / forward_steps
+        self.model.add_metric(per_pred_fwd_mae, name="fwd_mae", aggregation="mean")
+
+        fwd_loss = fwd_wt * fwd_mse
         self.model.add_loss(fwd_loss)
         self.model.add_metric(fwd_loss, name="fwd_loss", aggregation="mean")
 
