@@ -110,7 +110,15 @@ def get_num_str(num):
         num = "{:.5f}".format(num)
     return num
 
-def save_history(H: History, run_name, marker_step=1000, skip=30):
+def save_history(H: History, run_name, secs, marker_step=1000, skip=30):
+    epochs_ran = len(H.history["loss"])
+    statsfile_name = "stats/" + run_name + "/stats.txt"
+    with open(statsfile_name, "w") as f:
+        f.write(run_name + "\n\n")
+        f.write("Epochs ran:\t\t\t{}\n".format(epochs_ran))
+        f.write("Secs per epoch:\t\t{}\n".format(secs / epochs_ran))
+        f.write("Minutes total:\t\t{}\n".format(secs / 60))
+        f.write("Hours total:\t\t{}\n".format(secs / 3600))
     for k in H.history.keys():
         if not k.startswith("val_"):
             # skips first couple epochs for clearer scale
@@ -130,6 +138,15 @@ def save_history(H: History, run_name, marker_step=1000, skip=30):
                 skipshift=skip)
             plt.savefig("stats/" + run_name + "/" + k + ".png")
             plt.close()
+
+        with open(statsfile_name, "a") as f:
+            if valdata is None:
+                f.write("Final {}:\t\t\t{}\n".format(k, train_data[-1]))
+                f.write("Min {}:\t\t\t{}\n".format(k, min(train_data)))
+            else:
+                f.write("Final {}:\t\t\t{}\tval:\t{}\n".format(k, train_data[-1], valdata[-1]))
+                f.write("Min {}:\t\t\t{}\tval:\t{}\n".format(k, min(train_data), min(valdata)))
+
 
 
 def make_plot(xrange, data, title, axlabels, dnames=None, marker_step=1, 

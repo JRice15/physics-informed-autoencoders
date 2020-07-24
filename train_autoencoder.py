@@ -215,20 +215,14 @@ start_time = time.time()
 
 H = autoencoder.train(callbacks)
 
+secs = time.time() - start_time
 epochs_ran = len(H.history["loss"])
-mins = (time.time() - start_time) / 60
-secs_per_epoch = (time.time() - start_time) / epochs_ran
+mins = secs / 60
+secs_per_epoch = secs / epochs_ran
 print("Training took {0} minutes".format(mins))
 print("{0} seconds per epoch".format(secs_per_epoch))
 
 marker_step = epochs_ran // 5
-save_history(H, run_name, marker_step=marker_step)
+save_history(H, run_name, secs, marker_step=marker_step)
 
 autoencoder.save_eigenvals()
-
-with open("stats/" + run_name + "/timing.txt", "w") as f:
-    f.write(run_name + "\n\n")
-    f.write("Epochs ran:\t\t\t{}\n".format(epochs_ran))
-    f.write("Secs per epoch:\t\t{}\n".format(secs_per_epoch))
-    f.write("Minutes total:\t\t{}\n".format(mins))
-    f.write("Hours total:\t\t{}\n".format(mins/60))
