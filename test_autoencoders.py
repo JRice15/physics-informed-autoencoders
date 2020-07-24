@@ -6,6 +6,7 @@ import shutil
 import tkinter as tk
 import time
 from tkinter import filedialog
+import copy
 
 import keras
 import keras.backend as K
@@ -83,7 +84,7 @@ def run_name_from_model_path(model_path):
     return model_path
 
 
-def run_one_test(model_path, data, num_steps, step_arr):
+def run_one_test(model_path, data, tfdata, num_steps, step_arr):
     """
     test a set of weights with multi-step prediction
     """
@@ -96,10 +97,7 @@ def run_one_test(model_path, data, num_steps, step_arr):
     os.makedirs("test_results/preds/" + dirname, exist_ok=True)
 
     shape = data.shape
-    num_snapshots = shape[0]
-    data = data.reshape((1,) + shape)
-    print("data shape:", data.shape)
-    tfdata = tf.convert_to_tensor(data)
+    num_snapshots = shape[1]
 
     mse_min = []
     mse_max = []
@@ -225,8 +223,13 @@ else:
     relpred_avgs = []
     relpred_errbounds = []
 
+    shape = data.shape
+    data = data.reshape((1,) + shape)
+    print("data shape:", data.shape)
+    tfdata = tf.convert_to_tensor(data)
+
     for p in paths:
-        m_min, m_max, m_avg, a_min, a_max, a_avg, r_min, r_max, r_avg = run_one_test(p, data, args.pred_steps, step_arr)
+        m_min, m_max, m_avg, a_min, a_max, a_avg, r_min, r_max, r_avg = run_one_test(p, data, tfdata, args.pred_steps, step_arr)
         mse_avgs.append(m_avg)
         mse_errbounds.append( (m_min, m_max) )
         mae_avgs.append(a_avg)
