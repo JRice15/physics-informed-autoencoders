@@ -43,13 +43,14 @@ parser = argparse.ArgumentParser(description="Select model first")
 parser.add_argument("--model",required=True,choices=["koopman","lyapunov"],help="name of the model to use")
 parser.add_argument("--dataset",required=True,type=str,help="name of dataset")
 parser.add_argument("--convolutional",action="store_true",default=False,help="create a convolutional model")
+parser.add_argument("--no-basemap",action="store_true",default=False,help="do not use basemap (cannot write sst images)")
 
 args, unknown = parser.parse_known_args()
 
 model_type = args.model
 
 # Read Data
-dataset = data_from_name(args.dataset, (not args.convolutional))
+dataset = data_from_name(args.dataset, (not args.convolutional), no_basemap=args.no_basemap)
 
 # Load defaults
 if args.convolutional:
@@ -95,6 +96,7 @@ parser.add_argument("--activation",type=str,default="tanh",help="name of activat
 parser.add_argument("--tboard",action="store_true",default=False,help="run tensorboard")
 parser.add_argument("--summary",action="store_true",default=False,help="show model summary")
 parser.add_argument("--no-earlystopping",action="store_true",default=False,help="do not use early stopping")
+parser.add_argument("--no-basemap",action="store_true",default=False,help="do not use basemap (cannot write sst images)")
 
 if args.convolutional:
     parser.add_argument("--depth",type=int,default=defaults["depth"],help="depth of convolutional network")

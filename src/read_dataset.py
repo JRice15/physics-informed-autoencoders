@@ -6,8 +6,6 @@ import abc
 import cmocean
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
-# do 'conda install basemap' to get this module for some reason
-from mpl_toolkits.basemap import Basemap
 
 
 
@@ -129,9 +127,10 @@ class FlowCylinder(CustomDataset):
 
 class SST(CustomDataset):
 
-    def __init__(self, flat, full=False, full_test=False, **kwargs):
+    def __init__(self, flat, full=False, full_test=False, no_basemap=False, **kwargs):
         self.flat = flat
         self.full = full
+        self.no_basemap = no_basemap
 
         X = np.load('data/sstday.npy')
         lats = np.load('data/lats.npy')
@@ -185,6 +184,17 @@ class SST(CustomDataset):
 
     def write_im(self, img, title, filename, directory="train_results", 
             subtitle="", show=False, outline=False):
+
+        # sometimes its just too hard to get this basemap package to work.
+        # Easier to train in my gpu env and bring it back to my laptop to test 
+        # and generate ims
+        if self.no_basemap:
+            if show:
+                raise ValueError("Cannot make and show plots in '--no-basemap' mode")
+            return
+        # do 'conda install basemap' to get this module, for some reason
+        from mpl_toolkits.basemap import Basemap
+
         img = img.reshape(self.imshape)
         fig, ax = plt.subplots(1, 1, facecolor="white",  edgecolor='k', figsize=(7,4))
         # ax = ax.ravel()
