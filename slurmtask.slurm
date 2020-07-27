@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -A br20_rice566
 #SBATCH -J rice_pia
-#SBATCH -t 24:00:00
+#SBATCH -t 2-0
 #SBATCH -p all
 #SBATCH -N 1
 #SBATCH --gres=gpu:1
@@ -16,6 +16,8 @@ module load cuda/9.0.176
 
 
 ulimit -s unlimited
+
+cd ~/physics-informed-autoencoders
 
 python3 train_autoencoder.py --model koopman --bwd-steps 0 --name b --convol --seed 0 --filters 8 16 32 --activation relu
 python3 train_autoencoder.py --model koopman --name k --convol --seed 0 --filters 8 16 32 --activation relu
