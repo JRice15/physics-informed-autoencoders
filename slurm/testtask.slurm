@@ -4,7 +4,7 @@
 #SBATCH -t 0:20:00
 #SBATCH -p all
 #SBATCH -N 1
-#SBATCH --gres=gpu:1
+#SBATCH --gpus:1
 #SBATCH -o /qfs/people/rice566/logs/log_pia.out
 #SBATCH -e /qfs/people/rice566/logs/log_pia.err
 
