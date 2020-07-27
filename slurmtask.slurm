@@ -9,25 +9,17 @@
 #SBATCH -e log_pia.err
 
 source /etc/profile.d/modules.sh
-source /qfs/people/xuwe421/hyperopt/bin/activate
+source /qfs/people/rice566/tf_gpu/bin/activate
 
 module purge
 module load cuda/9.0.176
 
-
 ulimit -s unlimited
 
-cd ~/physics-informed-autoencoders
+cd /qfs/people/rice566/physics-informed-autoencoders
 
-python3 train_autoencoder.py --model koopman --bwd-steps 0 --name b --convol --seed 0 --filters 8 16 32 --activation relu
-python3 train_autoencoder.py --model koopman --name k --convol --seed 0 --filters 8 16 32 --activation relu
 
-for s in {1..3}; do
-	python3 train_autoencoder.py --model koopman --bwd-steps 0 --name b --convol --seed "$s" --filters 8 16 32 --activation relu
-	python3 train_autoencoder.py --model koopman --name k --convol --seed "$s" --filters 8 16 32 --activation relu
-	python3 train_autoencoder.py --model koopman --bwd-steps 0 --name b --convol --seed "$s" --filters 8 16 32 
-	python3 train_autoencoder.py --model koopman --name k --convol --seed "$s" --filters 8 16 32
-	python3 train_autoencoder.py --model koopman --bwd-steps 0 --name b --convol --seed "$s" --filters 16 32 64
-	python3 train_autoencoder.py --model koopman --name k --convol --seed "$s" --filters 16 32 64
-done
+# Tasks Go Here
+
+python3 train_autoencoder.py --model koopman --no-basemap --name b --convol --seed 0 --filters 8 16 32 --activation relu --bwd-steps 0 
 
