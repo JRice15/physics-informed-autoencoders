@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -A br20_rice566
 #SBATCH -J rice_pia
-#SBATCH -t 2-0
+#SBATCH -t 2:00:00
 #SBATCH -p all
 #SBATCH -N 1
 #SBATCH --gres=gpu:1
