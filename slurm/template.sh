@@ -10,7 +10,7 @@
 
 module purge
 module load python/3.6.6
-module load cuda/10.0.130
+module load cuda/10.1.105
 
 source /etc/profile.d/modules.sh
 source /qfs/people/rice566/tf_gpu2/bin/activate

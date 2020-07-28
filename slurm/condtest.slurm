@@ -9,11 +9,11 @@
 #SBATCH -e /qfs/people/rice566/physics-informed-autoencoders/slurm/quicktest.err
 
 module purge
-module load python/3.6.6
-module load cuda/10.0.130
+module load python/anaconda3.2019.3
 
-source /etc/profile.d/modules.sh
-source /qfs/people/rice566/tf_gpu2/bin/activate
+source /share/apps/python/anaconda3.2019.3/etc/profile.d/conda.sh
+
+conda activate tf2.2
 
 ulimit -s unlimited
 
