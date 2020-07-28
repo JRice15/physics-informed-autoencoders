@@ -3,13 +3,18 @@ import os
 import string
 
 parser = argparse.ArgumentParser()
-parser.add_argument("name")
-parser.add_argument("file")
+parser.add_argument("-n","--name",required=True)
+parser.add_argument("-f","--file",required=True)
+parser.add_argument("-t","--time",required=True,type=str)
 parser.add_argument("--seperate",action="store_true",default=False,help="split file lines into a task per line")
 
 args = parser.parse_args()
 
 slurmdir = os.path.dirname(os.path.realpath(__file__))
+
+# create dirs
+os.makedirs(os.path.join(slurmdir, "logs"), exist_ok=True)
+os.makedirs(os.path.join(slurmdir, "tasks"), exist_ok=True)
 
 # read template
 template = os.path.join(slurmdir, "template.sh")
@@ -21,6 +26,18 @@ with open(args.file, "r") as f:
     test_lines = f.readlines()
 
 
+def maybe_format(line, write_name, time_str):
+    """
+    format if it has format fields. uses a nifty hack from SO:
+    https://stackoverflow.com/questions/46161710/how-to-check-if-string-has-format-arguments-in-python
+    """
+    field_names = [tup[1] for tup in string.Formatter().parse(line) if tup[1] is not None]
+    if "logname" in field_names:
+        line = line.format(logname=write_name)
+    if "time" in field_names:
+        line = line.format(time=time_str)
+    return line
+
 def do_writing(template_lines, test_lines, index=None):
     """
     write a task file
@@ -29,8 +46,7 @@ def do_writing(template_lines, test_lines, index=None):
     if index is not None:
         write_name += "_" + str(index)
 
-    is_fmt = lambda line: len(tuple(string.Formatter().parse(line))) > 1
-    new_template_lines = [i.format(logname=write_name) if is_fmt(i) else i for i in template_lines]
+    new_template_lines = [maybe_format(i, write_name, args.time) for i in template_lines]
 
     filename = write_name + ".slurm"
 

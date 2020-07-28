@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -A br20_rice566
 #SBATCH -J rice_pia
-#SBATCH -t 0:20:00
+#SBATCH -t {time}
 #SBATCH -p all
 #SBATCH -N 1
 #SBATCH --gres=gpu:1
@@ -9,11 +9,10 @@
 #SBATCH -e /qfs/people/rice566/physics-informed-autoencoders/slurm/logs/{logname}.err
 
 module purge
-module load python/3.6.6
-module load cuda/10.1.105
+module load python/anaconda3.2019.3
 
-source /etc/profile.d/modules.sh
-source /qfs/people/rice566/tf_gpu2/bin/activate
+source /share/apps/python/anaconda3.2019.3/etc/profile.d/conda.sh
+conda activate tf2.2
 
 ulimit -s unlimited
 
