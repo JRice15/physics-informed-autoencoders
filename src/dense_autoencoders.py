@@ -1,18 +1,18 @@
 import abc
 import sys
 
-import keras.backend as K
+import tensorflow.keras.backend as K
 import numpy as np
 import tensorflow as tf
-from keras import Input, regularizers
-from keras.activations import tanh
-from keras.initializers import glorot_normal, zeros
-from keras.layers import (Activation, Add, BatchNormalization, Concatenate,
+from tensorflow.keras import Input, regularizers
+from tensorflow.keras.activations import tanh
+from tensorflow.keras.initializers import glorot_normal, zeros
+from tensorflow.keras.layers import (Activation, Add, BatchNormalization, Concatenate,
                           Conv2D, Cropping2D, Dense, Dropout,
                           GlobalAveragePooling2D, GlobalMaxPooling2D, Lambda,
                           Layer, LeakyReLU, MaxPooling2D, PReLU, ReLU, Reshape,
                           Softmax, Subtract, UpSampling2D, ZeroPadding2D, add)
-from keras.models import Model
+from tensorflow.keras.models import Model
 
 from src.common import *
 from src.read_dataset import *

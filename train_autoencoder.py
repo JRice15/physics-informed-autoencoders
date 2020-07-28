@@ -5,16 +5,16 @@ import os
 import shutil
 import json
 
-import keras
-import keras.backend as K
+from tensorflow import keras
+import tensorflow.keras.backend as K
 import numpy as np
 import tensorflow as tf
-from keras.callbacks import (LearningRateScheduler, ModelCheckpoint,
+from tensorflow.keras.callbacks import (LearningRateScheduler, ModelCheckpoint,
                              ReduceLROnPlateau, TensorBoard, EarlyStopping)
-from keras.losses import mse
-from keras import metrics
-from keras.models import Model
-from keras.optimizers import Adam
+from tensorflow.keras.losses import mse
+from tensorflow.keras import metrics
+from tensorflow.keras.models import Model
+from tensorflow.keras.optimizers import Adam
 
 from src.common import *
 from src.lyapunov_autoencoder import *
@@ -201,10 +201,10 @@ if args.summary:
     # summarize
     autoencoder.model.summary()
     # plot
-    keras.utils.pydot = pydot
+    tensorflow.keras.utils.pydot = pydot
     layers = autoencoder.model._layers
     autoencoder.model._layers = [i for i in layers if isinstance(i, Layer)]
-    keras.utils.plot_model(
+    tensorflow.keras.utils.plot_model(
         autoencoder.model, show_shapes=True
     )
     autoencoder.model._layers = layers

@@ -3,19 +3,19 @@ import math
 import sys
 import re
 
-import keras.backend as K
+import tensorflow.keras.backend as K
 import numpy as np
 import tensorflow as tf
-from keras import Input
-from keras import activations
-from keras.initializers import glorot_normal, zeros
-from keras.layers import (Activation, Add, BatchNormalization, Concatenate,
+from tensorflow.keras import Input
+from tensorflow.keras import activations
+from tensorflow.keras.initializers import glorot_normal, zeros
+from tensorflow.keras.layers import (Activation, Add, BatchNormalization, Concatenate,
                           Conv2D, Conv2DTranspose, Cropping2D, Dense, Dropout,
                           Flatten, GlobalAveragePooling2D, GlobalMaxPooling2D,
                           Lambda, Layer, LeakyReLU, MaxPooling2D, ReLU,
                           Reshape, Softmax, Subtract, UpSampling2D,
                           ZeroPadding2D, add, PReLU)
-from keras.models import Model
+from tensorflow.keras.models import Model
 
 
 class AddChannels(Layer):

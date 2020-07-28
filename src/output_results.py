@@ -2,13 +2,13 @@ import math
 import re
 
 import cmocean
-import keras
+from tensorflow import keras
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
-from keras import backend as K
+from tensorflow.keras import backend as K
 import numpy as np
 import tensorflow as tf
-from keras.callbacks import Callback, History
+from tensorflow.keras.callbacks import Callback, History
 
 from src.read_dataset import *
 

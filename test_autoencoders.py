@@ -8,13 +8,13 @@ import time
 from tkinter import filedialog
 import copy
 
-import keras
-import keras.backend as K
+from tensorflow import keras
+import tensorflow.keras.backend as K
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
-from keras import Input
-from keras.models import Model
+from tensorflow.keras import Input
+from tensorflow.keras.models import Model
 
 from src.common import *
 from src.dense_autoencoders import *
@@ -88,7 +88,7 @@ def run_one_test(model_path, data, tfdata, num_steps, step_arr):
     """
     test a set of weights with multi-step prediction
     """
-    autoencoder = keras.models.load_model(model_path, custom_objects=CUSTOM_OBJ_DICT)
+    autoencoder = tensorflow.keras.models.load_model(model_path, custom_objects=CUSTOM_OBJ_DICT)
 
     vis_model(autoencoder)
     encoder, dynamics, decoder = get_pipeline(autoencoder)
