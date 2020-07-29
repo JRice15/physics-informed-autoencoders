@@ -8,11 +8,17 @@
 #SBATCH -o /qfs/people/rice566/physics-informed-autoencoders/slurm/logs/{logname}.out
 #SBATCH -e /qfs/people/rice566/physics-informed-autoencoders/slurm/logs/{logname}.err
 
+source ~/.bash_profile
+
 module purge
 module load python/anaconda3.2019.3
 
 source /share/apps/python/anaconda3.2019.3/etc/profile.d/conda.sh
+conda activate
 conda activate tf2.2
+
+conda list
+which python
 
 ulimit -s unlimited
 
