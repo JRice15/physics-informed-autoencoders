@@ -16,9 +16,9 @@
     1
   ],
   "filters": [
-    3,
-    6,
-    6
+    8,
+    16,
+    32
   ],
   "kernel_sizes": [
     3,
@@ -26,8 +26,8 @@
     5,
     5
   ],
-  "fwd_steps": 8,
-  "bwd_steps": 8,
+  "fwd_steps": 14,
+  "bwd_steps": 14,
   "identity": 1,
   "forward": 1,
   "backward": 0.1,
