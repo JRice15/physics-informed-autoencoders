@@ -274,6 +274,9 @@ print("Max final relative prediction err:", relpred_stats[2])
 
 relpred_stats[0] = 0
 with open("test_results/" + fullname + ".stats.tsv", "w") as f:
+    if not args.load_last:
+        for p in paths:
+            f.write(str(p) + "\n")
     f.write("{:<7} {:<9} {:<9} {:<9}\n".format("", "Min", "Avg", "Max"))
     f.write("{:<7} {:<7.7f} {:<7.7f} {:<7.7f}\n".format("RelPred", *relpred_stats))
     f.write("{:<7} {:<7.7f} {:<7.7f} {:<7.7f}\n".format("MSE", *mse_stats))
