@@ -151,7 +151,9 @@ class ConvAutoencoderBlock(Layer, abc.ABC):
             conv = ConvDilateLayer(up=up, activation=self.activation_name, 
                 name=self.name+str(i), filters=self.filters[i], 
                 kernel_size=self.kernel_sizes[i], dilation=self.dilations[i], 
-                weight_decay=self.weight_decay, batchnorm=True)
+                weight_decay=self.weight_decay, 
+                # batchnorm=True,
+                )
             setattr(self, "block"+str(i), conv)
 
         # final layer
