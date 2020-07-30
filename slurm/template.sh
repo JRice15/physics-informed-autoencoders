@@ -2,7 +2,7 @@
 #SBATCH -A br20_rice566
 #SBATCH -J rice_pia
 #SBATCH -t {time}
-#SBATCH -p all
+#SBATCH -p shared
 #SBATCH -N 1
 #SBATCH --gres=gpu:1
 #SBATCH -o /qfs/people/rice566/physics-informed-autoencoders/slurm/logs/{logname}.out

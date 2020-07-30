@@ -32,9 +32,11 @@ def make_dirs(dirname):
     os.makedirs("models", exist_ok=True)
     os.makedirs("train_results/" + dirname, exist_ok=True)
     os.makedirs("stats/" + dirname, exist_ok=True)
-    if os.path.exists("logs"):
+    try:
         print("Removing old Tensorboard logs...")
         shutil.rmtree("logs")
+    except FileNotFoundError:
+        pass
     os.makedirs("logs", exist_ok=True)
 
 
