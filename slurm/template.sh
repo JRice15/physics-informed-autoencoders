@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -A br20_rice566
-#SBATCH -J rice_pia
+#SBATCH -J {taskname}
 #SBATCH -t {time}
 #SBATCH -p shared
 #SBATCH -N 1

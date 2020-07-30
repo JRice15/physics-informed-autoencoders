@@ -36,6 +36,8 @@ def maybe_format(line, write_name, time_str):
         line = line.format(logname=write_name)
     if "time" in field_names:
         line = line.format(time=time_str)
+    if "taskname" in field_names:
+        line = line.format(taskname=write_name)
     return line
 
 def do_writing(template_lines, test_lines, index=None):
