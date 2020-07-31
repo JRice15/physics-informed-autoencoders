@@ -1,6 +1,17 @@
 # Physics Informed Autoencoders
 
 
+## Model Types
+
+Physics informed:
+* Koopman: Koopman consistent forward and backward dynamics
+* Lyapunov: Enforces Lyapunov Stability with regularization (maybe out of data; does not support a convolutional architechture at the moment, though it very easily could)
+
+Baselines:
+* Constant: Guesses a single value for the whole field, initialized at 0
+* Identity: Guesses the input
+
+
 ## Dependancies
 
 I have not found a clean way to install all of the required versions of packages
@@ -21,3 +32,4 @@ Other Dependancies (as long as the version is compatible with the strict depende
 * pydot (only if the '--summary' flag is used during training)
 
 Good luck
+

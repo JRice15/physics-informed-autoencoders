@@ -21,6 +21,7 @@ from src.lyapunov_autoencoder import *
 from src.koopman_autoencoder import *
 from src.output_results import *
 from src.read_dataset import *
+from src.baselines import *
 
 print("Tensorflow version:", tf.__version__) # 2.2.0
 print("Keras version:", keras.__version__) # 2.4.3
@@ -42,7 +43,7 @@ def make_dirs(dirname):
 
 # Get model and dataset first
 parser = argparse.ArgumentParser(description="Select model first")
-parser.add_argument("--model",required=True,choices=["koopman","lyapunov"],help="name of the model to use")
+parser.add_argument("--model",required=True,help="name of the model to use")
 parser.add_argument("--dataset",required=True,type=str,help="name of dataset")
 parser.add_argument("--convolutional",action="store_true",default=False,help="create a convolutional model")
 parser.add_argument("--no-basemap",action="store_true",default=False,help="do not use basemap (cannot write sst images)")
@@ -154,6 +155,8 @@ if model_type == "lyapunov":
     autoencoder = LyapunovAutoencoder(args, dataset)
 elif model_type == "koopman":
     autoencoder = KoopmanAutoencoder(args, dataset)
+else:
+    autoencoder = NaiveBaseline(model_type, args, dataset)
 
 run_name = autoencoder.make_run_name()
 make_dirs(run_name)

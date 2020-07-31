@@ -17,6 +17,7 @@ from keras import Input
 from keras.models import Model
 
 from src.common import *
+from src.baselines import *
 from src.dense_autoencoders import *
 from src.conv_autoencoders import *
 from src.lyapunov_autoencoder import *
@@ -264,7 +265,7 @@ relpred_stats, mark = get_stats(relpred_avgs, min_ind=True)
 relpred_ylim = max(1, relpred_stats[0] * 1.2)
 
 mse_stats = get_stats(mse_avgs)
-mse_ylim = max(1, np.min(mse_stats[0]) * 1.2)
+mse_ylim = max(1, mse_stats[0] * 1.2)
 
 mae_stats = get_stats(mae_avgs)
 
@@ -272,7 +273,7 @@ print("Min final relative prediction err:", relpred_stats[0])
 print("Avg final relative prediction err:", relpred_stats[1])
 print("Max final relative prediction err:", relpred_stats[2])
 
-relpred_stats[0] = 0
+
 with open("test_results/" + fullname + ".stats.tsv", "w") as f:
     if not args.load_last:
         for p in paths:
