@@ -40,10 +40,11 @@ def make_dirs(dirname):
         pass
     os.makedirs("logs", exist_ok=True)
 
+model_choices = ["koopman", "lyapunov", "identity", "constant"]
 
 # Get model and dataset first
 parser = argparse.ArgumentParser(description="Select model first")
-parser.add_argument("--model",required=True,help="name of the model to use")
+parser.add_argument("--model",required=True,choices=model_choices,help="name of the model to use")
 parser.add_argument("--dataset",required=True,type=str,help="name of dataset")
 parser.add_argument("--convolutional",action="store_true",default=False,help="create a convolutional model")
 parser.add_argument("--no-basemap",action="store_true",default=False,help="do not use basemap (cannot write sst images)")
@@ -57,15 +58,25 @@ dataset = data_from_name(args.dataset, (not args.convolutional), no_basemap=args
 
 # Load defaults
 if args.convolutional:
-    defaults_file = "presets/conv-default.{}.{}.json".format(model_type, dataset.dataname)
+    defaults_files = [
+        "presets/conv-default.{}.{}.json".format(model_type, dataset.dataname)
+    ]
 else:
-    defaults_file = "presets/orig-paper.{}.{}.json".format(model_type, dataset.dataname)
-try:
-    with open(defaults_file, "r") as f:
-        defaults = json.load(f)
-except FileNotFoundError:
+    defaults_files = [
+        "presets/orig-paper.{}.{}.json".format(model_type, dataset.dataname),
+        "presets/default.{}.{}.json".format(model_type, dataset.dataname)
+    ]
+defaults = None
+for def_path in defaults_files:
+    try:
+        with open(def_path, "r") as f:
+            defaults = json.load(f)
+    except FileNotFoundError:
+        pass
+
+if defaults is None:
     raise FileNotFoundError("Defaults file for this model and dataset configuration could not be found. Create "
-        "a file '{}' with the desired presets".format(defaults_file))
+        "a file '{}' with the desired presets".format(defaults_files))
 
 if args.convolutional:
     parser = argparse.ArgumentParser()
@@ -83,7 +94,7 @@ parser = argparse.ArgumentParser(description="see Erichson et al's 'PHYSICS-INFO
     "AUTOENCODERS FOR LYAPUNOV-STABLE FLUID FLOW PREDICTION' for context of "
     "greek-letter hyperparameters")
 
-parser.add_argument("--model",required=True,choices=["koopman","lyapunov"],help="name of the model to use")
+parser.add_argument("--model",required=True,choices=model_choices,help="name of the model to use")
 parser.add_argument("--name",type=str,required=True,help="name of this training run")
 parser.add_argument("--convolutional",action="store_true",default=False,help="create a convolutional version of the model")
 parser.add_argument("--conv-dynamics",action="store_true",default=False,help="use a convolutional dynamics layer")
@@ -106,7 +117,7 @@ if args.convolutional:
     parser.add_argument("--dilations",type=int,default=defaults["dilations"],nargs=num_sizes,help="encoder layer conv dilations in order")
     parser.add_argument("--kernel-sizes",type=int,default=defaults["kernel_sizes"],nargs=num_sizes,help="encoder layer kernel sizes in order")
     parser.add_argument("--filters",type=int,default=defaults["filters"],nargs=num_sizes-1,help="encoder layer filters in order, except last (which is always 1)")
-else:
+elif model_type in ("lyapunov", "koopman"):
     parser.add_argument("--sizes",type=int,default=defaults["sizes"],nargs=num_sizes,help="encoder layer output widths in decreasing order of size")
 
 if model_type == "lyapunov":

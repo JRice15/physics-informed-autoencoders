@@ -95,20 +95,20 @@ class BaseAE(abc.ABC):
         self.args = args
         self.dataset = dataset
 
-    def run_name_common_suffix(self):
+    def run_name_common_suffix(self, has_sizes=True):
         args = self.args
         run_name = ""
         if args.conv_dynamics:
             run_name += "c-dyn."
         run_name += self.dataset.dataname + "."
         run_name += get_activation_name(args.activation) + "."
-        run_name += "{}ep{}bs{}lr{}wd{}gc.".format(args.epochs, args.batchsize, args.lr, args.wd, args.gradclip)
+        run_name += "{}ep{}bs{}lr{}wd{}gc".format(args.epochs, args.batchsize, args.lr, args.wd, args.gradclip)
         if args.convolutional:
-            run_name += "k" + "".join([str(i) for i in args.kernel_sizes])
+            run_name += ".k" + "".join([str(i) for i in args.kernel_sizes])
             run_name += ".d" + "".join([str(i) for i in args.dilations])
             run_name += ".f" + "".join([str(i) for i in args.filters])
-        else:
-            run_name += "s" + "_".join([str(i) for i in args.sizes])
+        elif has_sizes:
+            run_name += ".s" + "_".join([str(i) for i in args.sizes])
         run_name += ".{}".format(args.seed)
         return run_name
 

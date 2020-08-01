@@ -1,0 +1,9 @@
+{
+    "name": "default",
+    "dataset": "sst-full",
+    "lr": 0.01,
+    "wd": 0.0,
+    "gradclip": 0.5,
+    "epochs": 500,
+    "batchsize": 32
+}

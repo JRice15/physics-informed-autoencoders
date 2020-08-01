@@ -27,23 +27,23 @@ class ConstantLayer(Layer):
 
     def __init__(self, name, **kwargs):
         super().__init__(name=name, **kwargs)
-        self.w = self.add_weight(
-            shape=None,
-            initializer=lambda *args, **kwargs: 0.0,
-            trainable=True
-        )
     
     def build(self, input_shape):
-        self.var_shape = input_shape[1:]
-        assert len(self.var_shape) < 3
-    
-    def call(self, x=None):
-        tf.print("guess: " + str(self.w.numpy()))
-        w = K.reshape(self.w, (1,1))
-        w = K.repeat_elements(w, self.var_shape[0], 0)
-        if len(self.var_shape > 1):
-            w = K.repeat_elements(w, self.var_shape[1], 1)
-        return w
+        init = lambda *args,**kwargs: tf.zeros(input_shape[1:])
+        self.w = self.add_weight(
+            shape=input_shape[1:],
+            initializer=init
+        )
+
+    def call(self, x):
+        diff = x - self.w
+        loss = K.mean(K.square(diff))
+        self.add_metric(K.mean(self.w), name="w-mean", aggregation="mean")
+
+        self.add_loss(loss)
+        self.add_metric(loss, name="mse", aggregation="mean")
+        
+        return self.w
 
 
 
@@ -51,6 +51,7 @@ class NaiveBaseline(BaseAE):
 
     def __init__(self, kind, args, dataset=None):
         super().__init__(args, dataset)
+        self.kind = kind
         self.build_enc_dec()
         self.build_model(
             kind=kind,
@@ -59,8 +60,8 @@ class NaiveBaseline(BaseAE):
 
     def build_enc_dec(self):
         # identity layers
-        self.encoder = Layer()
-        self.decoder = Layer()
+        self.encoder = Layer(name="encoder")
+        self.decoder = Layer(name="decoder")
 
     def build_model(self, kind, snapshot_shape):
         """
@@ -75,24 +76,25 @@ class NaiveBaseline(BaseAE):
         inpt = Input(snapshot_shape)
         print("Autoencoder Input shape:", inpt.shape)
 
-        if kind in ("const", "constant"):
-            self.guess = ConstantLayer("const")
+        if kind == "constant":
+            self.dynamics = ConstantLayer("const-dynamics")
         elif kind == "identity":
-            self.guess = Layer()
+            self.dynamics = Layer(name="identity-dynamics")
         else:
             raise ValueError("Unknown model type '{}'".format(kind))
-        x = self.guess(inpt)
+
+        x = self.encoder(inpt)
+        x = self.dynamics(x)
+        x = self.decoder(x)
 
         self.model = Model(inpt, x)
     
     def compile_model(self, optimizer):
-        self.model.compile(optimizer=optimizer, loss=losses.mse, 
-            metrics=[metrics.MeanSquaredError(), metrics.MeanAbsoluteError()])
+        self.model.compile(optimizer=optimizer)
 
     def make_run_name(self):
-        args = self.args
-        run_name = args.name + ".const."
-        run_name += self.run_name_common_suffix()
+        run_name = self.args.name + "." + self.kind + "."
+        run_name += self.run_name_common_suffix(False)
         return run_name
 
     def format_data(self):
@@ -120,10 +122,10 @@ class NaiveBaseline(BaseAE):
         """
         get forward prediction pipeline
         """
-        raise NotImplementedError()
+        return (self.encoder, self.dynamics, self.decoder)
 
     def save_eigenvals(self):
-        return self.encoder, self.guess, self.decoder
+        pass
 
 
 CUSTOM_OBJ_DICT.update({
