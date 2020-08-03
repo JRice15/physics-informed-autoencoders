@@ -251,20 +251,20 @@ if not args.no_quick:
     fullname += ".q"
 
 
-def get_stats(run_avgs, min_ind=False):
+def get_stats(run_avgs, index=-1, min_ind=False):
     """
     make min, avg, max from 
     """
-    finals = [i[-1] for i in run_avgs]
+    values = [i[index] for i in run_avgs]
     stats = {
-        "min": np.min(finals), 
-        "avg": np.mean(finals), 
-        "max": np.max(finals),
-        "med": np.median(finals),
-        "std": np.std(finals),
+        "min": np.min(values), 
+        "avg": np.mean(values), 
+        "max": np.max(values),
+        "med": np.median(values),
+        "std": np.std(values),
     }
     if min_ind:
-        return stats, finals.index(min(finals))
+        return stats, values.index(min(values))
     return stats
 
 relpred_stats, mark = get_stats(relpred_avgs, min_ind=True)
@@ -279,14 +279,20 @@ print("Final relative prediction err:")
 for k,v in relpred_stats.items():
     print(k + ":", v)
 
+# collect stats at every 30 steps
+stats_timestep_inds = [i for i in range(len(step_arr)) if step_arr[i] % 30 == 0]
 with open("test_results/" + fullname + ".stats.tsv", "w") as f:
     if not args.load_last:
         for p in paths:
             f.write(str(p) + "\n")
     f.write("{:<7} {:<9} {:<9} {:<9} {:<9} {:<9}\n".format("", "Min", "Avg", "Max", "Med", "Std"))
-    f.write("{:<7} {min:<7.7f} {avg:<7.7f} {max:<7.7f} {med:<7.7f} {std:<7.7f}\n".format("RelPred", **relpred_stats))
-    f.write("{:<7} {min:<7.7f} {avg:<7.7f} {max:<7.7f} {med:<7.7f} {std:<7.7f}\n".format("MSE", **mse_stats))
-    f.write("{:<7} {min:<7.7f} {avg:<7.7f} {max:<7.7f} {med:<7.7f} {std:<7.7f}\n".format("MAE", **mae_stats))
+    def writeline(name, stats):
+        f.write("{:<7} {min:<7.7f} {avg:<7.7f} {max:<7.7f} {med:<7.7f} {std:<7.7f}\n".format(name, **stats))
+    for i in stats_timestep_inds:
+        f.write("Step {}\n".format(step_arr[i]))
+        writeline("RelPred", **get_stats(relpred_avgs, i))
+        writeline("MSE", **get_stats(mse_avgs, i))
+        writeline("MAE", **get_stats(mae_avgs, i))
 
 # MSE
 make_plot(xrange=step_arr, data=tuple(mse_avgs), dnames=names, title="Prediction MSE -- " + args.dataset, 
