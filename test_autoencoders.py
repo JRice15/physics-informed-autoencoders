@@ -256,32 +256,37 @@ def get_stats(run_avgs, min_ind=False):
     make min, avg, max from 
     """
     finals = [i[-1] for i in run_avgs]
-    stats = [np.min(finals), np.mean(finals), np.max(finals)]
+    stats = {
+        "min": np.min(finals), 
+        "avg": np.mean(finals), 
+        "max": np.max(finals),
+        "med": np.median(finals),
+        "std": np.std(finals),
+    }
     if min_ind:
         return stats, finals.index(min(finals))
     return stats
 
 relpred_stats, mark = get_stats(relpred_avgs, min_ind=True)
-relpred_ylim = max(1, relpred_stats[0] * 1.2)
+relpred_ylim = max(1, relpred_stats["min"] * 1.2)
 
 mse_stats = get_stats(mse_avgs)
-mse_ylim = max(1, mse_stats[0] * 1.2)
+mse_ylim = max(1, mse_stats["min"] * 1.2)
 
 mae_stats = get_stats(mae_avgs)
 
-print("Min final relative prediction err:", relpred_stats[0])
-print("Avg final relative prediction err:", relpred_stats[1])
-print("Max final relative prediction err:", relpred_stats[2])
-
+print("Final relative prediction err:")
+for k,v in relpred_stats.items():
+    print(k + ":", v)
 
 with open("test_results/" + fullname + ".stats.tsv", "w") as f:
     if not args.load_last:
         for p in paths:
             f.write(str(p) + "\n")
-    f.write("{:<7} {:<9} {:<9} {:<9}\n".format("", "Min", "Avg", "Max"))
-    f.write("{:<7} {:<7.7f} {:<7.7f} {:<7.7f}\n".format("RelPred", *relpred_stats))
-    f.write("{:<7} {:<7.7f} {:<7.7f} {:<7.7f}\n".format("MSE", *mse_stats))
-    f.write("{:<7} {:<7.7f} {:<7.7f} {:<7.7f}\n".format("MAE", *mae_stats))
+    f.write("{:<7} {:<9} {:<9} {:<9} {:<9} {:<9}\n".format("", "Min", "Avg", "Max", "Med", "Std"))
+    f.write("{:<7} {min:<7.7f} {avg:<7.7f} {max:<7.7f} {med:<7.7f} {std:<7.7f}\n".format("RelPred", **relpred_stats))
+    f.write("{:<7} {min:<7.7f} {avg:<7.7f} {max:<7.7f} {med:<7.7f} {std:<7.7f}\n".format("MSE", **mse_stats))
+    f.write("{:<7} {min:<7.7f} {avg:<7.7f} {max:<7.7f} {med:<7.7f} {std:<7.7f}\n".format("MAE", **mae_stats))
 
 # MSE
 make_plot(xrange=step_arr, data=tuple(mse_avgs), dnames=names, title="Prediction MSE -- " + args.dataset, 
