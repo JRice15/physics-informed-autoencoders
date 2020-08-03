@@ -177,10 +177,10 @@ class KoopmanAutoencoder(BaseAE):
         else:
             intermediate, bottleneck = args.sizes
 
-            self.encoder = DenseAutoencoderBlock(args.activation, (intermediate, intermediate, bottleneck), 
-                args.wd, name="encoder")
-            self.decoder = DenseAutoencoderBlock(args.activation, (intermediate, intermediate, input_shape[-1]), 
-                args.wd, name="decoder")
+            self.encoder = DenseAutoencoderBlock((intermediate, intermediate, bottleneck), 
+                args.wd, name="encoder", activation=args.activation)
+            self.decoder = DenseAutoencoderBlock((intermediate, intermediate, input_shape[-1]), 
+                args.wd, name="decoder", activation=args.activation)
 
 
     def build_model(self, snapshot_shape, output_dims, fwd_wt, bwd_wt, id_wt, 

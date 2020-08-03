@@ -68,8 +68,8 @@ class DenseAutoencoderBlock(Layer):
     block of 3 fully connected layers, either for encoder or decoder
     """
 
-    def __init__(self, activation, sizes, weight_decay, name, activate_last=False, 
-            batchnorm_last=False, **kwargs):
+    def __init__(self, sizes, weight_decay, name, activate_last=False, 
+            activation="tanh", batchnorm_last=False, **kwargs):
         super().__init__(name=name, **kwargs)
         self.sizes = sizes
         self.weight_decay = weight_decay
