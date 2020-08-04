@@ -142,13 +142,13 @@ def run_one_test(model_path, data, tfdata, num_steps, step_arr):
             relpred_err = np.linalg.norm(diff) / np.linalg.norm(true)
             step_relpred_err.append(relpred_err)
 
-            if (step % 10 == 0 or step in (1,3,5)) and i == dataset.write_index:
+            if (step % 10 == 0 or step in (1,3,5)) and (i == dataset.write_index or i in dataset.test_write_inds):
                 dataset.write_im(pred, title=str(step) + " steps prediction", 
-                    filename="pred_step" + str(step), directory="test_results/preds/"+dirname )
-                truthfile = "test_results/truth/" + dataset.dataname + ".truth_step" + str(step) + ".png"
+                    filename="index" + str(i) + ".pred_step" + str(step), directory="test_results/preds/"+dirname )
+                truthfile = "test_results/truth/" + dataset.dataname + ".index" + str(i) + ".truth_step" + str(step) + ".png"
                 if not os.path.exists(truthfile):
                     dataset.write_im(true, title=str(step) + " steps ground truth", 
-                        filename=dataset.dataname + ".truth_step" + str(step), directory="test_results/truth")
+                        filename=dataset.dataname + ".index" + str(i) + ".truth_step" + str(step), directory="test_results/truth")
         
         prev_step = step
 

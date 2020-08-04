@@ -29,11 +29,12 @@ def data_from_name(name, flat, **kwargs):
 
 class CustomDataset(abc.ABC):
 
-    def __init__(self, name, X, Xtest, imshape, input_shape, write_index):
+    def __init__(self, name, X, Xtest, imshape, input_shape, write_index, test_write_inds=None):
         self.dataname = name
         self.imshape = imshape
         self.input_shape = input_shape
         self.write_index = write_index
+        self.test_write_inds = [] if test_write_inds is None else test_write_inds
         self.X = X
         self.Xtest = Xtest
         self.Y = None
@@ -177,7 +178,7 @@ class SST(CustomDataset):
 
         name="sst-full" if full else "sst"
         super().__init__(name=name, X=X_train, Xtest=X_test, imshape=imshape,
-            input_shape=X_train[0].shape, write_index=140)
+            input_shape=X_train[0].shape, write_index=140, test_write_inds=[380])
         self.lats = lats
         self.lons = lons
 
