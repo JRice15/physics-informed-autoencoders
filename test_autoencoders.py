@@ -290,9 +290,9 @@ with open("test_results/" + fullname + ".stats.tsv", "w") as f:
         f.write("{:<7} {min:<7.7f} {avg:<7.7f} {max:<7.7f} {med:<7.7f} {std:<7.7f}\n".format(name, **stats))
     for i in stats_timestep_inds:
         f.write("Step {}\n".format(step_arr[i]))
-        writeline("RelPred", **get_stats(relpred_avgs, i))
-        writeline("MSE", **get_stats(mse_avgs, i))
-        writeline("MAE", **get_stats(mae_avgs, i))
+        writeline("RelPred", get_stats(relpred_avgs, i))
+        writeline("MSE", get_stats(mse_avgs, i))
+        writeline("MAE", get_stats(mae_avgs, i))
 
 # MSE
 make_plot(xrange=step_arr, data=tuple(mse_avgs), dnames=names, title="Prediction MSE -- " + args.dataset, 
