@@ -38,6 +38,7 @@ parser.add_argument("--convolutional",action="store_true",default=False,help="wh
 parser.add_argument("--seed",type=int,default=0)
 parser.add_argument("--no-quick",action="store_true",default=False,help="whether to just test steps 1,3,5,10,20,30,...")
 parser.add_argument("--load-last",action="store_true",default=False,help="reload data of last training run")
+parser.add_argument("--overwrite",action="store_true",default=False)
 
 args = parser.parse_args()
 
@@ -146,7 +147,7 @@ def run_one_test(model_path, data, tfdata, num_steps, step_arr):
                 dataset.write_im(pred, title=str(step) + " steps prediction", 
                     filename="index" + str(i) + ".pred_step" + str(step), directory="test_results/preds/"+dirname )
                 truthfile = "test_results/truth/" + dataset.dataname + ".index" + str(i) + ".truth_step" + str(step) + ".png"
-                if not os.path.exists(truthfile):
+                if args.overwrite or not os.path.exists(truthfile):
                     dataset.write_im(true, title=str(step) + " steps ground truth", 
                         filename=dataset.dataname + ".index" + str(i) + ".truth_step" + str(step), directory="test_results/truth")
         
@@ -281,7 +282,7 @@ for k,v in relpred_stats.items():
 
 # collect stats at every 30 steps
 stats_timestep_inds = [i for i in range(len(step_arr)) if step_arr[i] % 30 == 0]
-with open("test_results/" + fullname + ".stats.tsv", "w") as f:
+with open("test_results/" + fullname + ".stats.txt", "w") as f:
     if not args.load_last:
         for p in paths:
             f.write(str(p) + "\n")
@@ -294,33 +295,35 @@ with open("test_results/" + fullname + ".stats.tsv", "w") as f:
         writeline("MSE", get_stats(mse_avgs, i))
         writeline("MAE", get_stats(mae_avgs, i))
 
-# MSE
+# MSE Errbounds
 make_plot(xrange=step_arr, data=tuple(mse_avgs), dnames=names, title="Prediction MSE -- " + args.dataset, 
     mark=mark, axlabels=("steps", "mean squared error"), legendloc="upper left",
     marker_step=(args.pred_steps // 5), fillbetweens=mse_errbounds,
-    fillbetween_desc="w/ 90% confidence", ylim=relpred_ylim)
+    fillbetween_desc="w/ 90% confidence", ylim=mse_ylim, ymin=0)
 plt.savefig("test_results/" + fullname + ".multistep_mse.w_confidence.png")
 plt.clf()
 
+# MSE Clean
 make_plot(xrange=step_arr, data=tuple(mse_avgs), dnames=names, title="Prediction MSE -- " + args.dataset, 
     mark=mark, axlabels=("steps", "mean squared error"), legendloc="upper left",
     marker_step=(args.pred_steps // 5), fillbetweens=None,
-    fillbetween_desc="", ylim=mse_ylim)
+    fillbetween_desc="", ylim=mse_ylim, ymin=0)
 plt.savefig("test_results/" + fullname + ".multistep_mse.png")
 plt.clf()
 
-# Relative Error
+# RelPred Errbounds
 make_plot(xrange=step_arr, data=tuple(relpred_avgs), dnames=names, title="Prediction Relative Error -- " + args.dataset, 
     mark=mark, axlabels=("steps", "relative error"), legendloc="upper left",
     marker_step=(args.pred_steps // 5), fillbetweens=relpred_errbounds,
-    fillbetween_desc="w/ 90% confidence", ylim=relpred_ylim)
+    fillbetween_desc="w/ 90% confidence", ylim=relpred_ylim, ymin=0)
 plt.savefig("test_results/" + fullname + ".multistep_relpred_err.w_confidence.png")
 plt.clf()
 
+# RelPred Clean
 make_plot(xrange=step_arr, data=tuple(relpred_avgs), dnames=names, title="Prediction Relative Error -- " + args.dataset, 
     mark=mark, axlabels=("steps", "relative error"), legendloc="upper left",
     marker_step=(args.pred_steps // 5), fillbetweens=None,
-    fillbetween_desc="", ylim=mse_ylim)
+    fillbetween_desc="", ylim=relpred_ylim, ymin=0)
 plt.savefig("test_results/" + fullname + ".multistep_relpred_err.png")
 plt.clf()
 

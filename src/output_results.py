@@ -151,7 +151,7 @@ def save_history(H: History, run_name, secs, marker_step=1000, skip=30):
 
 def make_plot(xrange, data, title, axlabels, dnames=None, marker_step=1, 
         mark=0, legendloc="upper right", skipshift=0, fillbetweens=None, 
-        fillbetween_desc="", ylim=None):
+        fillbetween_desc="", ylim=None, ymin=None):
     """
     Args:
         data: tuple of lists/arrays, each of which is a data line
@@ -162,15 +162,15 @@ def make_plot(xrange, data, title, axlabels, dnames=None, marker_step=1,
     assert isinstance(data, tuple)
 
     global_min = 1e20
+    global_max = -1e20
     mark_data = None
     for i in range(len(data)):
         if data[i] is None:
             continue
         if i == mark:
             mark_data = data[i]
-        thismin = np.min(data[i])
-        if thismin < global_min:
-            global_min = thismin
+        global_min = min(np.min(data[i]), global_min)
+        global_max = max(np.max(data[i]), global_max)
         plt.plot(xrange, data[i])
         if fillbetweens is not None:
             plt.fill_between(xrange, fillbetweens[i][0], fillbetweens[i][1], alpha=0.15)
@@ -206,12 +206,16 @@ def make_plot(xrange, data, title, axlabels, dnames=None, marker_step=1,
         dnames = [i for i in dnames if i is not None]
         plt.legend(dnames, loc=legendloc)
 
-    _, current_top = plt.ylim()
+    current_bot, current_top = plt.ylim()
     if ylim is not None:
         current_top = min(ylim, current_top)
-        plt.ylim(top=current_top)
     global_min = global_min - (0.03 * abs(current_top - global_min))
-    plt.ylim(bottom=global_min)
+    bot_diff = 0
+    if ymin is not None:
+        global_min = min(ymin, global_min, current_bot)
+        bot_diff = max(current_bot - global_min, 0)
+    new_top = current_top + (0.1 * bot_diff)
+    plt.ylim(bottom=global_min, top=new_top)
 
     plt.margins(x=0.125, y=0.1)
 

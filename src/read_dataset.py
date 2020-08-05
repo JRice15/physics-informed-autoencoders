@@ -161,14 +161,27 @@ class SST(CustomDataset):
         
         # scale
         m, n = imshape
+        print("orig", X.shape, X.mean())
         X = X.reshape(-1,m*n)
-        X -= X.mean(axis=0)    
+        mean = X.mean(axis=0)
+        print("mean", mean, mean.shape, mean.mean())
+        print(np.mean([i for i in mean if i > 0]))
+        X -= mean
+        print("newmean", X.mean())
         X = X.reshape(-1,m*n)
-        X = 2 * (X - np.min(X)) / np.ptp(X) - 1
+        minm = np.min(X)
+        ptp = np.ptp(X)
+        X = 2 * (X - minm) / ptp - 1
+        print(X.mean(), X.min(), X.max())
         if flat:
             X = X.reshape(-1,m*n) 
         else:
             X = X.reshape(-1,m,n) 
+        
+        def de_scale(x):
+            x = (x + minm) / 2 * ptp + 1
+            x = x + mean
+        self.de_scale = de_scale
         
         # split into train and test set
         X_train = X[training_idx]  
@@ -181,7 +194,9 @@ class SST(CustomDataset):
             input_shape=X_train[0].shape, write_index=140, test_write_inds=[380])
         self.lats = lats
         self.lons = lons
-
+        # shift scaling to make slightly more vibrant, generally warmer
+        self.Xmin = 0.8 * min(np.min(self.X), np.min(self.Xtest))
+        self.Xmax = 0.65 * max(np.max(self.X), np.max(self.Xtest))
 
     def write_im(self, img, title, filename, directory="train_results", 
             subtitle="", show=False, outline=False):
@@ -200,9 +215,9 @@ class SST(CustomDataset):
         fig, ax = plt.subplots(1, 1, facecolor="white",  edgecolor='k', figsize=(7,4))
         # ax = ax.ravel()
         plt.title(title)
-        mintemp = np.min(img)
-        maxtemp = np.max(img)
-        minmax = np.maximum(mintemp,maxtemp)
+        # mintemp = np.min(img)
+        # maxtemp = np.max(img)
+        # minmax = np.maximum(mintemp,maxtemp)
 
         if self.full:
             m = Basemap(projection='mill',
@@ -223,7 +238,7 @@ class SST(CustomDataset):
                         #resolution='l',
                         ax=ax)
         m.pcolormesh(self.lons, self.lats, img, cmap=cmocean.cm.balance, 
-            latlon=True, alpha=1.0, shading='gouraud', vmin = -minmax, vmax=minmax)
+            latlon=True, alpha=1.0, shading='gouraud', vmin=self.Xmin, vmax=self.Xmax)
         m.fillcontinents(color='lightgray', lake_color='aqua')
         m.drawmapboundary(fill_color='lightgray')
         m.drawcoastlines(3)
