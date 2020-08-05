@@ -159,30 +159,43 @@ class SST(CustomDataset):
         #training_idx, test_idx = indices[0:1825], indices[1825:2557] # 5 years    
         #training_idx, test_idx = indices[230:1325], indices[1325:2000] # 3 years
         
+        self.mask = np.any(X==0, axis=0)
+        if flat:
+            self.mask = self.mask.flatten()
+
         # scale
         m, n = imshape
         print("orig", X.shape, X.mean())
+
+        origX = np.copy(X)
+
         X = X.reshape(-1,m*n)
         mean = X.mean(axis=0)
-        print("mean", mean, mean.shape, mean.mean())
-        print(np.mean([i for i in mean if i > 0]))
-        X -= mean
-        print("newmean", X.mean())
+        X = X - mean
         X = X.reshape(-1,m*n)
         minm = np.min(X)
         ptp = np.ptp(X)
         X = 2 * (X - minm) / ptp - 1
-        print(X.mean(), X.min(), X.max())
         if flat:
             X = X.reshape(-1,m*n) 
         else:
             X = X.reshape(-1,m,n) 
         
-        def de_scale(x):
-            x = (x + minm) / 2 * ptp + 1
+        def de_scale(x, unflatten=False):
+            """
+            convert scaled -> celcius
+            Returns:
+                de-scaled units (np array), new units name (str)
+            """
+            x = x.reshape(-1,m*n)
+            x = (x + 1) * ptp / 2 + minm
             x = x + mean
+            if unflatten:
+                x = x.reshape(-1,m,n)
+            return x, "Celcius"
+
         self.de_scale = de_scale
-        
+
         # split into train and test set
         X_train = X[training_idx]  
         X_test = X[test_idx]

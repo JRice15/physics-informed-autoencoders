@@ -39,6 +39,7 @@ parser.add_argument("--seed",type=int,default=0)
 parser.add_argument("--no-quick",action="store_true",default=False,help="whether to just test steps 1,3,5,10,20,30,...")
 parser.add_argument("--load-last",action="store_true",default=False,help="reload data of last training run")
 parser.add_argument("--overwrite",action="store_true",default=False)
+parser.add_argument("--mask",action="store_true",default=False,help="whether to mask out land")
 
 args = parser.parse_args()
 
@@ -86,6 +87,29 @@ def run_name_from_model_path(model_path):
     return model_path
 
 
+def quad_test(x, test, num=4):
+    x = x.reshape(dataset.imshape)
+    cl = len(x) // num
+    rl = len(x[0]) // num
+    out = []
+    for r in range(num):
+        row = []
+        for c in range(num):
+            v = x[ c*cl:(c+1)*cl, r*rl:(r+1)*rl ]
+            row.append(test(v))
+        out.append(row)
+    return np.array(out)
+
+
+if args.mask:
+    try:
+        mask = dataset.mask
+    except AttributeError:
+        raise ValueError("This dataset does not support masking. Use an SST dataset")
+else:
+    mask = None
+
+
 def run_one_test(model_path, data, tfdata, num_steps, step_arr):
     """
     test a set of weights with multi-step prediction
@@ -98,6 +122,11 @@ def run_one_test(model_path, data, tfdata, num_steps, step_arr):
     dirname = run_name_from_model_path(model_path)
     os.makedirs("test_results/preds/" + dirname, exist_ok=True)
 
+    try:
+        de_scale = dataset.de_scale
+        has_descale = True
+    except AttributeError:
+        has_descale = False
     shape = data.shape
     num_snapshots = shape[1]
 
@@ -110,6 +139,9 @@ def run_one_test(model_path, data, tfdata, num_steps, step_arr):
     relpred_min = []
     relpred_max = []
     relpred_avg = []
+    dmae_min = []
+    dmae_avg = []
+    dmae_max = []
 
     print("\n")
     print(model_path)
@@ -125,18 +157,30 @@ def run_one_test(model_path, data, tfdata, num_steps, step_arr):
         step_mse = []
         step_mae = []
         step_relpred_err = []
+        step_dmae = []
         for i in range(num_snapshots - num_steps):
 
             # next step(s)
             for _ in range(step - prev_step):
                 x[i] = dynamics(x[i])
-            pred = decoder(x[i]).numpy()
-            true = data[:,i+step,:]
+            pred = decoder(x[i]).numpy().squeeze()
+            true = data[:,i+step,:].squeeze()
+            if mask is not None:
+                pred[mask] = 0.0
+                true[mask] = 0.0
 
             diff = pred - true
             mse = np.mean(diff ** 2)
             step_mse.append(mse)
 
+            if has_descale:
+                d_pred, u = de_scale(pred)
+                d_true, u = de_scale(true)
+                d_diff = d_pred - d_true
+                d_mae = np.mean(np.abs(d_diff))
+                step_dmae.append(d_mae)
+            else:
+                u = "n/a"
             mae = np.mean(np.abs(diff))
             step_mae.append(mae)
 
@@ -145,7 +189,7 @@ def run_one_test(model_path, data, tfdata, num_steps, step_arr):
 
             if (step % 10 == 0 or step in (1,3,5)) and (i == dataset.write_index or i in dataset.test_write_inds):
                 dataset.write_im(pred, title=str(step) + " steps prediction", 
-                    filename="index" + str(i) + ".pred_step" + str(step), directory="test_results/preds/"+dirname )
+                    filename="index" + str(i) + ".pred_step" + str(step), directory="test_results/preds/"+dirname)
                 truthfile = "test_results/truth/" + dataset.dataname + ".index" + str(i) + ".truth_step" + str(step) + ".png"
                 if args.overwrite or not os.path.exists(truthfile):
                     dataset.write_im(true, title=str(step) + " steps ground truth", 
@@ -156,10 +200,15 @@ def run_one_test(model_path, data, tfdata, num_steps, step_arr):
         mean_mse = np.mean(step_mse)
         mean_mae = np.mean(step_mae)
         mean_relpred_err = np.mean(step_relpred_err)
-        print(step, "steps relative error:", mean_relpred_err, "MSE:", mean_mse, "MAE:", mean_mae)
+        if has_descale:
+            mean_dmae = np.mean(step_dmae)
+        else:
+            mean_dmae = 0
+        print(step, "steps relative error:", mean_relpred_err, u, "MAE:", mean_dmae, "MSE:", mean_mse, "MAE:", mean_mae)
         mse_avg.append(mean_mse)
         mae_avg.append(mean_mae)
         relpred_avg.append(mean_relpred_err)
+        dmae_avg.append(mean_dmae)
 
         mse_min.append(np.percentile(step_mse, 5))
         mse_max.append(np.percentile(step_mse, 95))
@@ -167,10 +216,14 @@ def run_one_test(model_path, data, tfdata, num_steps, step_arr):
         mae_max.append(np.percentile(step_mae, 95))
         relpred_min.append(np.percentile(step_relpred_err, 5))
         relpred_max.append(np.percentile(step_relpred_err, 95))
-        
+        dmae_min.append(np.percentile(step_dmae, 5))
+        dmae_max.append(np.percentile(step_dmae, 95))
+
+
     return (mse_min, mse_max, mse_avg, 
             mae_min, mae_max, mae_avg, 
-            relpred_min, relpred_max, relpred_avg)
+            relpred_min, relpred_max, relpred_avg,
+            dmae_min, dmae_max, dmae_avg)
 
 
 if args.file is not None:
@@ -215,8 +268,9 @@ else:
 
 
 if args.load_last:
-    mse_avgs, mse_errbounds, mae_avgs, mae_errbounds, relpred_avgs, relpred_errbounds, names = \
-        np.load("test_results/lastdata.npy", allow_pickle=True)
+    loaddata = np.load("test_results/lastdata.npy", allow_pickle=True)
+    [mse_avgs, mse_errbounds, mae_avgs, mae_errbounds, relpred_avgs, 
+        relpred_errbounds, dmae_avgs, dmae_errbounds, names] = loaddata
 else:
     mse_avgs = []
     mse_errbounds = []
@@ -224,6 +278,8 @@ else:
     mae_errbounds = []
     relpred_avgs = []
     relpred_errbounds = []
+    dmae_avgs = []
+    dmae_errbounds = []
 
     shape = data.shape
     data = data.reshape((1,) + shape)
@@ -231,15 +287,19 @@ else:
     tfdata = tf.convert_to_tensor(data)
 
     for p in paths:
-        m_min, m_max, m_avg, a_min, a_max, a_avg, r_min, r_max, r_avg = run_one_test(p, data, tfdata, args.pred_steps, step_arr)
+        m_min, m_max, m_avg, a_min, a_max, a_avg, r_min, r_max, r_avg, d_min, d_max, d_avg = run_one_test(p, data, tfdata, args.pred_steps, step_arr)
         mse_avgs.append(m_avg)
         mse_errbounds.append( (m_min, m_max) )
         mae_avgs.append(a_avg)
         mae_errbounds.append( (a_min, a_max) )
         relpred_avgs.append(r_avg)
         relpred_errbounds.append( (r_min, r_max) )
+        dmae_avgs.append(d_avg)
+        dmae_errbounds.append( (d_min, d_max) )
     
-    np.save("test_results/lastdata.npy", [mse_avgs, mse_errbounds, mae_avgs, mae_errbounds, relpred_avgs, relpred_errbounds, names])
+    savedata = [mse_avgs, mse_errbounds, mae_avgs, mae_errbounds, relpred_avgs, 
+                relpred_errbounds, dmae_avgs, dmae_errbounds, names]
+    np.save("test_results/lastdata.npy", savedata)
 
 if len(mse_avgs) == 0:
     raise ValueError("No data!")
@@ -248,6 +308,8 @@ fullname = args.name + "." + dataset.dataname
 if args.convolutional:
     fullname += ".conv"
 fullname += "." + str(args.pred_steps)
+if args.mask:
+    fullname += ".masked"
 if not args.no_quick:
     fullname += ".q"
 
@@ -280,6 +342,11 @@ print("Final relative prediction err:")
 for k,v in relpred_stats.items():
     print(k + ":", v)
 
+try:
+    _, units = dataset.de_scale(dataset.X[0])
+except AttributeError:
+    units = "n/a"
+
 # collect stats at every 30 steps
 stats_timestep_inds = [i for i in range(len(step_arr)) if step_arr[i] % 30 == 0]
 with open("test_results/" + fullname + ".stats.txt", "w") as f:
@@ -294,6 +361,7 @@ with open("test_results/" + fullname + ".stats.txt", "w") as f:
         writeline("RelPred", get_stats(relpred_avgs, i))
         writeline("MSE", get_stats(mse_avgs, i))
         writeline("MAE", get_stats(mae_avgs, i))
+        writeline(units, get_stats(dmae_avgs, i))
 
 # MSE Errbounds
 make_plot(xrange=step_arr, data=tuple(mse_avgs), dnames=names, title="Prediction MSE -- " + args.dataset, 
@@ -326,6 +394,25 @@ make_plot(xrange=step_arr, data=tuple(relpred_avgs), dnames=names, title="Predic
     fillbetween_desc="", ylim=relpred_ylim, ymin=0)
 plt.savefig("test_results/" + fullname + ".multistep_relpred_err.png")
 plt.clf()
+
+if units != "n/a":
+    # DMAE Errbounds
+    make_plot(xrange=step_arr, data=tuple(dmae_avgs), dnames=names, title="Mean Absolute Error in " + units.title() + " -- " + args.dataset, 
+        mark=mark, axlabels=("steps", units), legendloc="upper left",
+        marker_step=(args.pred_steps // 5), fillbetweens=dmae_errbounds,
+        fillbetween_desc="w/ 90% confidence", ylim=None, ymin=0)
+    plt.savefig("test_results/" + fullname + ".multistep_ma_" + units + "_err.w_confidence.png")
+    plt.clf()
+
+    # DMAE Clean
+    make_plot(xrange=step_arr, data=tuple(dmae_avgs), dnames=names, title="Mean Absolute Error in " + units.title() + " -- " + args.dataset, 
+        mark=mark, axlabels=("steps", units), legendloc="upper left",
+        marker_step=(args.pred_steps // 5), fillbetweens=None,
+        fillbetween_desc="", ylim=None, ymin=0)
+    plt.savefig("test_results/" + fullname + ".multistep_ma_" + units + "_err.png")
+    plt.clf()
+
+
 
 print("Results have been save to 'test_results/'")
 
