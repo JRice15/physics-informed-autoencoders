@@ -29,7 +29,8 @@ def data_from_name(name, flat, **kwargs):
 
 class CustomDataset(abc.ABC):
 
-    def __init__(self, name, X, Xtest, imshape, input_shape, write_index, test_write_inds=None):
+    def __init__(self, name, X, Xtest, imshape, input_shape, write_index, 
+            test_write_inds=None, mask=None):
         self.dataname = name
         self.imshape = imshape
         self.input_shape = input_shape
@@ -39,6 +40,7 @@ class CustomDataset(abc.ABC):
         self.Xtest = Xtest
         self.Y = None
         self.Ytest = None
+        self.mask = mask
 
     def set_Y(self, Y, Ytest):
         self.Y = Y
@@ -128,10 +130,12 @@ class FlowCylinder(CustomDataset):
 
 class SST(CustomDataset):
 
-    def __init__(self, flat, full=False, full_test=False, no_basemap=False, **kwargs):
+    def __init__(self, flat, full=False, full_test=False, no_basemap=False, 
+            do_mask=False, no_continents=False, **kwargs):
         self.flat = flat
         self.full = full
         self.no_basemap = no_basemap
+        self.no_continents = no_continents
 
         X = np.load('data/sstday.npy')
         lats = np.load('data/lats.npy')
@@ -159,16 +163,14 @@ class SST(CustomDataset):
         #training_idx, test_idx = indices[0:1825], indices[1825:2557] # 5 years    
         #training_idx, test_idx = indices[230:1325], indices[1325:2000] # 3 years
         
-        self.mask = np.any(X==0, axis=0)
+        # make mask
+        mask = np.any(X==0, axis=0)
         if flat:
-            self.mask = self.mask.flatten()
+            mask = mask.flatten()
+
+        m, n = imshape
 
         # scale
-        m, n = imshape
-        print("orig", X.shape, X.mean())
-
-        origX = np.copy(X)
-
         X = X.reshape(-1,m*n)
         mean = X.mean(axis=0)
         X = X - mean
@@ -197,14 +199,20 @@ class SST(CustomDataset):
         self.de_scale = de_scale
 
         # split into train and test set
-        X_train = X[training_idx]  
+        X_train = X[training_idx]
         X_test = X[test_idx]
+
+        if do_mask:
+            print("doing masking")
+            X_train[:,mask] = 0.0
+            X_test[:,mask] = 0.0
 
         print("SST X shape:", X_train.shape, "Xtest shape:", X_test.shape)
 
         name="sst-full" if full else "sst"
         super().__init__(name=name, X=X_train, Xtest=X_test, imshape=imshape,
-            input_shape=X_train[0].shape, write_index=140, test_write_inds=[380])
+            input_shape=X_train[0].shape, write_index=140, test_write_inds=[380],
+            mask=mask)
         self.lats = lats
         self.lons = lons
         # shift scaling to make slightly more vibrant, generally warmer
@@ -252,9 +260,10 @@ class SST(CustomDataset):
                         ax=ax)
         m.pcolormesh(self.lons, self.lats, img, cmap=cmocean.cm.balance, 
             latlon=True, alpha=1.0, shading='gouraud', vmin=self.Xmin, vmax=self.Xmax)
-        m.fillcontinents(color='lightgray', lake_color='aqua')
-        m.drawmapboundary(fill_color='lightgray')
-        m.drawcoastlines(3)
+        if not self.no_continents:
+            m.fillcontinents(color='lightgray', lake_color='aqua')
+            m.drawmapboundary(fill_color='lightgray')
+            m.drawcoastlines(3)
         plt.tight_layout()
 
         plt.xlabel(subtitle)

@@ -128,6 +128,8 @@ class LyapunovAutoencoder(BaseAE):
         )
 
     def build_enc_dec(self, args, output_dims):
+        if args.mask:
+            raise NotImplementedError("lyapunov doesnt support masing yet (though it could!)")
         if args.convolutional:
             raise NotImplementedError("convolutional lyapunov not implemented yet")
         else:

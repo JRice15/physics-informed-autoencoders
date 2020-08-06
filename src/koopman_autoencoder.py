@@ -161,6 +161,7 @@ class KoopmanAutoencoder(BaseAE):
         )
     
     def build_enc_dec(self, args, input_shape):
+        mask = self.dataset.mask if args.mask else None
         if args.convolutional:
             self.encoder = ConvEncoder(args.depth, args.dilations, args.kernel_sizes, 
                 args.filters, args.wd, activation=args.activation, conv_dynamics=args.conv_dynamics)
@@ -172,7 +173,7 @@ class KoopmanAutoencoder(BaseAE):
             # create decoder (with reversed kernels, reversed and inverse dilations)
             self.decoder = ConvDecoder(args.depth, args.dilations[::-1], args.kernel_sizes[::-1],
                 args.filters, args.wd, activation=args.activation, conv_dynamics=args.conv_dynamics, encoded_shape=encoded_shape, 
-                target_shape=input_shape)
+                target_shape=input_shape, mask=mask)
 
         else:
             intermediate, bottleneck = args.sizes
@@ -180,7 +181,7 @@ class KoopmanAutoencoder(BaseAE):
             self.encoder = DenseAutoencoderBlock((intermediate, intermediate, bottleneck), 
                 args.wd, name="encoder", activation=args.activation)
             self.decoder = DenseAutoencoderBlock((intermediate, intermediate, input_shape[-1]), 
-                args.wd, name="decoder", activation=args.activation)
+                args.wd, name="decoder", activation=args.activation, mask=mask)
 
 
     def build_model(self, snapshot_shape, output_dims, fwd_wt, bwd_wt, id_wt, 
@@ -294,6 +295,7 @@ class KoopmanAutoencoder(BaseAE):
 
     def train(self, callbacks):
         self.format_data()
+
         H = self.model.fit(
             x=self.X,
             y=None,

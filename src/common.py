@@ -80,10 +80,36 @@ class Scale(Layer):
         return config
 
 
+class LandMask(Layer):
+
+    def __init__(self, mask, _formatted=False):
+        super().__init__()
+        if _formatted:
+            self.mask = mask
+        else:
+            mask = tf.convert_to_tensor(mask, K.floatx())
+            # flip bits; 0 => 1, 1 => 0
+            # now 1's are water, not land
+            self.mask = 1 - mask
+    
+    def call(self, x):
+        return x * self.mask
+
+    def get_config(self):
+        config = super().get_config()
+        config.update({
+            "mask": self.mask,
+            "_formatted": True,
+        })
+        return config
+
+
+
 CUSTOM_OBJ_DICT = {
     "AddChannels": AddChannels,
     "RemoveChannels": RemoveChannels,
     "Scale": Scale,
+    "LandMask": LandMask,
 }
 
 class BaseAE(abc.ABC):
@@ -198,7 +224,6 @@ def _get_activation(act_name, name=""):
 def inverse_reg(x, encoder, decoder):
     """
     regularizer to enforce that the decoder is the inverse of the encoder. 
-    Equation 9 per Erichson et al.  
     Args:
         encoder, decoder: ComposedLayers
         lambda_: weighting hyperparameter for this loss term
@@ -229,3 +254,26 @@ def vis_layer(layer: Layer, indent):
         if isinstance(v, Layer):
             vis_layer(v, indent+2)
 
+
+def quad_test(x, test, num=4, prnt=True):
+    """
+    this is a neat little function I made that isn't directly used but is useful
+    for visualizing arrays and such it lets you split the array into quadrants 
+    (or oct-rants, or anything) and summarizing that quadrant with one value, as
+    returned by the callable 'test'. A common test could be: 'lambda x: np.mean(x)'
+    """
+    if len(x.shape) == 1:
+        raise ValueError("x is not 2D")
+    rl = len(x) // num
+    cl = len(x[0]) // num
+    out = []
+    for r in range(num):
+        row = []
+        for c in range(num):
+            v = x[ r*rl:(r+1)*rl, c*cl:(c+1)*cl ]
+            row.append(test(v))
+        out.append(row)
+    out = np.array(out)
+    if prnt:
+        print(out)
+    return out

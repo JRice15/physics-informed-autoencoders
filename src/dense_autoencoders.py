@@ -69,23 +69,28 @@ class DenseAutoencoderBlock(Layer):
     """
 
     def __init__(self, sizes, weight_decay, name, activate_last=False, 
-            activation="tanh", batchnorm_last=False, **kwargs):
+            activation="tanh", batchnorm_last=False, mask=None, **kwargs):
         super().__init__(name=name, **kwargs)
         self.sizes = sizes
         self.weight_decay = weight_decay
         self.activate_last = activate_last
         self.batchnorm_last = batchnorm_last
         self.activation_name = activation
+        self.mask = mask
 
         self.block1 = FullyConnectedBlock(name+"1", sizes[0], weight_decay, activation=activation)
         self.block2 = FullyConnectedBlock(name+"2", sizes[1], weight_decay, activation=activation)
         self.block3 = FullyConnectedBlock(name+"3", sizes[2], weight_decay,
             activate=activate_last, batchnorm=batchnorm_last, activation=activation)
+        if self.mask is not None:
+            self.mask_layer = LandMask(self.mask)
 
     def call(self, x):
         x = self.block1(x)
         x = self.block2(x)
         x = self.block3(x)
+        if self.mask is not None:
+            x = self.mask_layer(x)
         return x
 
     def get_config(self):
@@ -95,7 +100,8 @@ class DenseAutoencoderBlock(Layer):
             "weight_decay": self.weight_decay,
             "activate_last": self.activate_last,
             "batchnorm_last": self.batchnorm_last,
-            "activation": self.activation_name
+            "activation": self.activation_name,
+            "mask": self.mask,
         })
         return config
 

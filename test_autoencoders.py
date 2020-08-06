@@ -87,19 +87,6 @@ def run_name_from_model_path(model_path):
     return model_path
 
 
-def quad_test(x, test, num=4):
-    x = x.reshape(dataset.imshape)
-    cl = len(x) // num
-    rl = len(x[0]) // num
-    out = []
-    for r in range(num):
-        row = []
-        for c in range(num):
-            v = x[ c*cl:(c+1)*cl, r*rl:(r+1)*rl ]
-            row.append(test(v))
-        out.append(row)
-    return np.array(out)
-
 
 if args.mask:
     try:

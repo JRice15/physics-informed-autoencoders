@@ -48,13 +48,16 @@ parser.add_argument("--model",required=True,choices=model_choices,help="name of 
 parser.add_argument("--dataset",required=True,type=str,help="name of dataset")
 parser.add_argument("--convolutional",action="store_true",default=False,help="create a convolutional model")
 parser.add_argument("--no-basemap",action="store_true",default=False,help="do not use basemap (cannot write sst images)")
+parser.add_argument("--mask",action="store_true",default=False,help="whether to mask off land")
+parser.add_argument("--no-continents",action="store_true",default=False,help="debugging arg, to verify masking is working properly")
 
-args, unknown = parser.parse_known_args()
+args, unknown_args = parser.parse_known_args()
 
 model_type = args.model
 
 # Read Data
-dataset = data_from_name(args.dataset, (not args.convolutional), no_basemap=args.no_basemap)
+dataset = data_from_name(args.dataset, (not args.convolutional), 
+    no_basemap=args.no_basemap, do_mask=args.mask, no_continents=args.no_continents)
 
 # Load defaults
 if args.convolutional:
@@ -81,8 +84,8 @@ if defaults is None:
 if args.convolutional:
     parser = argparse.ArgumentParser()
     parser.add_argument("--depth",type=int,default=defaults["depth"],help="depth of convolutional network")
-    depth_args, unknown = parser.parse_known_args()
-    num_sizes = depth_args.depth
+    args, unknown_args = parser.parse_known_args(unknown_args, namespace=args)
+    num_sizes = args.depth
 else:
     if model_type == "lyapunov":
         num_sizes = 3
@@ -94,11 +97,8 @@ parser = argparse.ArgumentParser(description="see Erichson et al's 'PHYSICS-INFO
     "AUTOENCODERS FOR LYAPUNOV-STABLE FLUID FLOW PREDICTION' for context of "
     "greek-letter hyperparameters")
 
-parser.add_argument("--model",required=True,choices=model_choices,help="name of the model to use")
 parser.add_argument("--name",type=str,required=True,help="name of this training run")
-parser.add_argument("--convolutional",action="store_true",default=False,help="create a convolutional version of the model")
 parser.add_argument("--conv-dynamics",action="store_true",default=False,help="use a convolutional dynamics layer")
-parser.add_argument("--dataset",type=str,default="flow_cylinder",help="name of dataset")
 parser.add_argument("--lr",type=float,default=defaults["lr"],help="learning rate")
 parser.add_argument("--wd",type=float,default=defaults["wd"],help="weight decay weighting factor")
 parser.add_argument("--gradclip",type=float,default=defaults["gradclip"],help="gradient clipping by norm, or 0 for no gradclipping")
@@ -110,7 +110,6 @@ parser.add_argument("--activation",type=str,default="tanh",help="name of activat
 parser.add_argument("--tboard",action="store_true",default=False,help="run tensorboard")
 parser.add_argument("--summary",action="store_true",default=False,help="show model summary")
 parser.add_argument("--no-earlystopping",action="store_true",default=False,help="do not use early stopping")
-parser.add_argument("--no-basemap",action="store_true",default=False,help="do not use basemap (cannot write sst images)")
 
 if args.convolutional:
     parser.add_argument("--depth",type=int,default=defaults["depth"],help="depth of convolutional network")
@@ -136,7 +135,7 @@ elif model_type == "koopman":
 parser.add_argument("--save",action="store_true",default=False,help="save these hyperparameters to a file, 'presets/<name>.<model>.json'")
 parser.add_argument("--load",action="store_true",default=False,help="load hyperparameters from a file in the 'presets/'")
 
-args = parser.parse_args()
+args = parser.parse_args(unknown_args, namespace=args)
 
 if args.conv_dynamics and not args.convolutional:
     raise ValueError("Convolutional dynamics require a convolutional encoder/decoder (add the --convolutional flag)")

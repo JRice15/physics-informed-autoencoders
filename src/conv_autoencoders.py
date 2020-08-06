@@ -46,6 +46,7 @@ class CropToTarget(Layer):
             return x
 
 
+
 class ConvDilateLayer(Layer):
     """
     Conv layer and Pooling/Upsampling, with optional TanH activation and/or Batchnorm
@@ -224,14 +225,16 @@ class ConvDecoder(ConvAutoencoderBlock):
     variable depth convolutional decoder
     """
 
-    def __init__(self, depth, dilations, kernel_sizes, filters, weight_decay, conv_dynamics, activate_last=False, 
-            activation="tanh", batchnorm_last=False, target_shape=None, encoded_shape=None, name="decoder", **kwargs):
+    def __init__(self, depth, dilations, kernel_sizes, filters, weight_decay, 
+            conv_dynamics, activate_last=False, activation="tanh", batchnorm_last=False, 
+            target_shape=None, encoded_shape=None, name="decoder", mask=None, **kwargs):
         super().__init__(name=name, activation=activation, depth=depth, dilations=dilations, kernel_sizes=kernel_sizes, 
             weight_decay=weight_decay, activate_last=activate_last, batchnorm_last=batchnorm_last, 
             conv_dynamics=conv_dynamics, filters=filters, **kwargs)
 
         self.target_shape = target_shape
         self.encoded_shape = encoded_shape
+        self.mask = mask
         self.make_conv_layers(up=True)
 
         if not self.conv_dynamics:
@@ -240,6 +243,8 @@ class ConvDecoder(ConvAutoencoderBlock):
         self.crop = CropToTarget(self.target_shape)
         self.rm_channels = RemoveChannels()
         # self.scale = Scale(1.0, name="decoder-scale")
+        if mask is not None:
+            self.mask_layer = LandMask(mask)
 
     def call(self, x, withshape=False):
         if not self.conv_dynamics:
@@ -260,6 +265,9 @@ class ConvDecoder(ConvAutoencoderBlock):
 
         # final scaling
         # x = self.scale(x)
+
+        if self.mask is not None:
+            x = self.mask_layer(x)
         return x
     
     def get_config(self):
@@ -267,6 +275,7 @@ class ConvDecoder(ConvAutoencoderBlock):
         config.update({
             "target_shape": self.target_shape,
             "encoded_shape": self.encoded_shape,
+            "mask": self.mask
         })
         return config
 
