@@ -163,8 +163,8 @@ class SST(CustomDataset):
         #training_idx, test_idx = indices[0:1825], indices[1825:2557] # 5 years    
         #training_idx, test_idx = indices[230:1325], indices[1325:2000] # 3 years
         
-        # make mask
-        mask = np.any(X==0, axis=0)
+        # mask: True where sea, False where land
+        mask = np.logical_not(np.any(X==0, axis=0))
         if flat:
             mask = mask.flatten()
 
@@ -194,9 +194,10 @@ class SST(CustomDataset):
             x = x + mean
             if unflatten:
                 x = x.reshape(-1,m,n)
-            return x, "Celcius"
+            return x.squeeze()
 
         self.de_scale = de_scale
+        self.de_scale_units = "Celcius"
 
         # split into train and test set
         X_train = X[training_idx]
@@ -204,8 +205,9 @@ class SST(CustomDataset):
 
         if do_mask:
             print("doing masking")
-            X_train[:,mask] = 0.0
-            X_test[:,mask] = 0.0
+            landmask = np.logical_not(mask)
+            X_train[:,landmask] = 0.0
+            X_test[:,landmask] = 0.0
 
         print("SST X shape:", X_train.shape, "Xtest shape:", X_test.shape)
 

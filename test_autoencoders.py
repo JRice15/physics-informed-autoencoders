@@ -152,22 +152,23 @@ def run_one_test(model_path, data, tfdata, num_steps, step_arr):
                 x[i] = dynamics(x[i])
             pred = decoder(x[i]).numpy().squeeze()
             true = data[:,i+step,:].squeeze()
+            if has_descale:
+                d_pred = de_scale(pred)
+                d_true = de_scale(true)
+                if mask is not None:
+                    d_pred = d_pred[mask]
+                    d_true = d_true[mask]
+                d_diff = d_pred - d_true
+                d_mae = np.mean(np.abs(d_diff))
+                step_dmae.append(d_mae)
             if mask is not None:
-                pred[mask] = 0.0
-                true[mask] = 0.0
+                pred = pred[mask]
+                true = true[mask]
 
             diff = pred - true
             mse = np.mean(diff ** 2)
             step_mse.append(mse)
 
-            if has_descale:
-                d_pred, u = de_scale(pred)
-                d_true, u = de_scale(true)
-                d_diff = d_pred - d_true
-                d_mae = np.mean(np.abs(d_diff))
-                step_dmae.append(d_mae)
-            else:
-                u = "n/a"
             mae = np.mean(np.abs(diff))
             step_mae.append(mae)
 
@@ -330,7 +331,7 @@ for k,v in relpred_stats.items():
     print(k + ":", v)
 
 try:
-    _, units = dataset.de_scale(dataset.X[0])
+    units = dataset.de_scale_units
 except AttributeError:
     units = "n/a"
 

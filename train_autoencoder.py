@@ -112,7 +112,6 @@ parser.add_argument("--summary",action="store_true",default=False,help="show mod
 parser.add_argument("--no-earlystopping",action="store_true",default=False,help="do not use early stopping")
 
 if args.convolutional:
-    parser.add_argument("--depth",type=int,default=defaults["depth"],help="depth of convolutional network")
     parser.add_argument("--dilations",type=int,default=defaults["dilations"],nargs=num_sizes,help="encoder layer conv dilations in order")
     parser.add_argument("--kernel-sizes",type=int,default=defaults["kernel_sizes"],nargs=num_sizes,help="encoder layer kernel sizes in order")
     parser.add_argument("--filters",type=int,default=defaults["filters"],nargs=num_sizes-1,help="encoder layer filters in order, except last (which is always 1)")

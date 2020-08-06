@@ -81,16 +81,14 @@ class Scale(Layer):
 
 
 class LandMask(Layer):
+    """
+    Args:
+        mask: bool array, True where sea, False where land
+    """
 
-    def __init__(self, mask, _formatted=False):
+    def __init__(self, mask):
         super().__init__()
-        if _formatted:
-            self.mask = mask
-        else:
-            mask = tf.convert_to_tensor(mask, K.floatx())
-            # flip bits; 0 => 1, 1 => 0
-            # now 1's are water, not land
-            self.mask = 1 - mask
+        self.mask = tf.convert_to_tensor(mask, K.floatx())
     
     def call(self, x):
         return x * self.mask
@@ -99,7 +97,6 @@ class LandMask(Layer):
         config = super().get_config()
         config.update({
             "mask": self.mask,
-            "_formatted": True,
         })
         return config
 
