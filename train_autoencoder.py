@@ -47,7 +47,7 @@ parser = argparse.ArgumentParser(description="Select model first")
 parser.add_argument("--model",required=True,choices=model_choices,help="name of the model to use")
 parser.add_argument("--dataset",required=True,type=str,help="name of dataset")
 parser.add_argument("--convolutional",action="store_true",default=False,help="create a convolutional model")
-parser.add_argument("--no-basemap",action="store_true",default=False,help="do not use basemap (cannot write sst images)")
+parser.add_argument("--no-basemap",action="store_true",default=False,help="whether to not use the basemap package, which can be annoying to get and configure on some systems (cannot write sst images without basemap)")
 parser.add_argument("--mask",action="store_true",default=False,help="whether to mask off land")
 parser.add_argument("--no-continents",action="store_true",default=False,help="debugging arg, to verify masking is working properly")
 

@@ -126,8 +126,10 @@ class BaseAE(abc.ABC):
         run_name = ""
         if args.conv_dynamics:
             run_name += "c-dyn."
-        run_name += self.dataset.dataname + "."
-        run_name += get_activation_name(args.activation) + "."
+        run_name += self.dataset.dataname
+        if args.mask:
+            run_name += "-m"
+        run_name += "." + get_activation_name(args.activation) + "."
         run_name += "{}ep{}bs{}lr{}wd{}gc".format(args.epochs, args.batchsize, args.lr, args.wd, args.gradclip)
         if args.convolutional:
             run_name += ".k" + "".join([str(i) for i in args.kernel_sizes])
