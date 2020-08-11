@@ -93,7 +93,6 @@ class ConvDilateLayer(Layer):
         """
         # print(self.name, "input shape:", x.shape)
         x = self.conv(x)
-        # print(self.name, "output shape:", x.shape)
         if not self.up and self.dilation > 1:
             x = self.dilation_layer(x)
         if self.activation is not None:
@@ -102,6 +101,7 @@ class ConvDilateLayer(Layer):
             x = self.batchnorm(x)
         if self.up and self.dilation > 1:
             x = self.dilation_layer(x)
+        # print(self.name, "output shape:", x.shape)
         return x
     
     def get_config(self):

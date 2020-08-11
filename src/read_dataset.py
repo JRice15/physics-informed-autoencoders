@@ -156,7 +156,7 @@ class SST(CustomDataset):
         # 3 years, 1 years
         training_idx = indices[220:1315]
         if full_test:
-            test_idx = indices[1315:2557] # 3 years, for testing
+            test_idx = indices[1315:2590] # 3 years + 180 day buffer, for testing
         else:
             test_idx = indices[1315:1680] # 1 year, for training
         #training_idx, test_idx = indices[230:2420], indices[2420:2557] # 6 years

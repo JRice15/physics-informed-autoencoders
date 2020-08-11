@@ -195,7 +195,7 @@ def make_plot(xrange, data, title, axlabels, dnames=None, marker_step=1,
     
         valstr = get_num_str(mark_data[-1])
         ytext = 5 if up else -12
-        plt.annotate(valstr, xy=(xrange[-1], mark_data[-1]), xytext=(1,ytext), textcoords="offset points")
+        plt.annotate(valstr, xy=(xrange[-1], mark_data[-1]), xytext=(-7,ytext), textcoords="offset points")
         plt.plot(xrange[-1], mark_data[-1], marker=".", color="green")
 
     plt.title(title)

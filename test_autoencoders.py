@@ -96,6 +96,13 @@ if args.mask:
 else:
     mask = None
 
+try:
+    de_scale = dataset.de_scale
+    descale_units = dataset.de_scale_units
+    has_descale = True
+except AttributeError:
+    has_descale = False
+    descale_units = "n/a"
 
 def run_one_test(model_path, data, tfdata, num_steps, step_arr):
     """
@@ -109,11 +116,6 @@ def run_one_test(model_path, data, tfdata, num_steps, step_arr):
     dirname = run_name_from_model_path(model_path)
     os.makedirs("test_results/preds/" + dirname, exist_ok=True)
 
-    try:
-        de_scale = dataset.de_scale
-        has_descale = True
-    except AttributeError:
-        has_descale = False
     shape = data.shape
     num_snapshots = shape[1]
 
@@ -150,20 +152,20 @@ def run_one_test(model_path, data, tfdata, num_steps, step_arr):
             # next step(s)
             for _ in range(step - prev_step):
                 x[i] = dynamics(x[i])
-            pred = decoder(x[i]).numpy().squeeze()
-            true = data[:,i+step,:].squeeze()
+            full_pred = decoder(x[i]).numpy().squeeze()
+            full_true = data[:,i+step,:].squeeze()
             if has_descale:
-                d_pred = de_scale(pred)
-                d_true = de_scale(true)
+                d_pred = de_scale(full_pred)
+                d_true = de_scale(full_true)
                 if mask is not None:
-                    d_pred = d_pred[mask]
-                    d_true = d_true[mask]
+                    d_pred = d_pred[mask.flatten()]
+                    d_true = d_true[mask.flatten()]
                 d_diff = d_pred - d_true
                 d_mae = np.mean(np.abs(d_diff))
                 step_dmae.append(d_mae)
             if mask is not None:
-                pred = pred[mask]
-                true = true[mask]
+                pred = full_pred[mask]
+                true = full_true[mask]
 
             diff = pred - true
             mse = np.mean(diff ** 2)
@@ -176,11 +178,11 @@ def run_one_test(model_path, data, tfdata, num_steps, step_arr):
             step_relpred_err.append(relpred_err)
 
             if (step % 10 == 0 or step in (1,3,5)) and (i == dataset.write_index or i in dataset.test_write_inds):
-                dataset.write_im(pred, title=str(step) + " steps prediction", 
+                dataset.write_im(full_pred, title=str(step) + " steps prediction", 
                     filename="index" + str(i) + ".pred_step" + str(step), directory="test_results/preds/"+dirname)
                 truthfile = "test_results/truth/" + dataset.dataname + ".index" + str(i) + ".truth_step" + str(step) + ".png"
                 if args.overwrite or not os.path.exists(truthfile):
-                    dataset.write_im(true, title=str(step) + " steps ground truth", 
+                    dataset.write_im(full_true, title=str(step) + " steps ground truth", 
                         filename=dataset.dataname + ".index" + str(i) + ".truth_step" + str(step), directory="test_results/truth")
         
         prev_step = step
@@ -192,7 +194,7 @@ def run_one_test(model_path, data, tfdata, num_steps, step_arr):
             mean_dmae = np.mean(step_dmae)
         else:
             mean_dmae = 0
-        print(step, "steps relative error:", mean_relpred_err, u, "MAE:", mean_dmae, "MSE:", mean_mse, "MAE:", mean_mae)
+        print(step, "steps relative error:", mean_relpred_err, descale_units, "MAE:", mean_dmae, "MSE:", mean_mse, "MAE:", mean_mae)
         mse_avg.append(mean_mse)
         mae_avg.append(mean_mae)
         relpred_avg.append(mean_relpred_err)
