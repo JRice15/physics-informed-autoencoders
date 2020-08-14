@@ -166,6 +166,9 @@ def run_one_test(model_path, data, tfdata, num_steps, step_arr):
             if mask is not None:
                 pred = full_pred[mask]
                 true = full_true[mask]
+            else:
+                pred = full_pred
+                true = full_true
 
             diff = pred - true
             mse = np.mean(diff ** 2)
@@ -337,8 +340,13 @@ try:
 except AttributeError:
     units = "n/a"
 
-# collect stats at every 30 steps
-stats_timestep_inds = [i for i in range(len(step_arr)) if step_arr[i] % 30 == 0]
+# collect stats every 10 steps
+if args.no_quick:
+    stats_timestep_inds = [i for i in range(len(step_arr)) if step_arr[i] % 10 == 0]
+    if 0 not in stats_timestep_inds:
+        stats_timestep_inds = [0] + stats_timestep_inds
+else:
+    stats_timestep_inds = range(len(step_arr))
 with open("test_results/" + fullname + ".stats.txt", "w") as f:
     if not args.load_last:
         for p in paths:

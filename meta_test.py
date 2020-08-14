@@ -115,7 +115,7 @@ for met in metrics:
         mark = get_mark(plotdata)
         make_plot(xrange=step_arr, data=tuple(plotdata), dnames=dnames, title="Prediction " + aggreg.title() + " " + met_name(met), 
             mark=mark, axlabels=("steps", met_name(met)), legendloc="upper left",
-            marker_step=step_arr[-1] - step_arr[-2], fillbetweens=None,
+            marker_step=30, fillbetweens=None,
             fillbetween_desc="", ylim=None, ymin=0)
         name = aggreg + "_" + met
         print(name)
@@ -129,7 +129,7 @@ for met in metrics:
             fillbetweens = [(low[i], high[i]) for i in range(len(low))]
             make_plot(xrange=step_arr, data=tuple(plotdata), dnames=dnames, title="Prediction " + aggreg.title() + " " + met_name(met), 
                 mark=mark, axlabels=("steps", met_name(met)), legendloc="upper left",
-                marker_step=step_arr[-1] - step_arr[-2], fillbetweens=fillbetweens,
+                marker_step=30, fillbetweens=fillbetweens,
                 fillbetween_desc="with 90% confidence interval", ylim=None, ymin=0)
             name = aggreg + "_" + met + ".w_90per_conf"
             print(name)
@@ -183,10 +183,20 @@ for met in metrics:
                             mean_diff = abs(mean1 - mean2)
                             error_thing = np.sqrt( (std1**2)/n1 + (std2**2)/n2 )
 
-                            Z = mean_diff / error_thing
+                            t = mean_diff / error_thing
 
-                            p = scipy_stats.norm.cdf(Z)
-                            p = (2 * p) - 1 # convert to two-sided p value
+                            df_num = ( (std1**2)/n1 + (std2**2)/n2 )**2
+                            den1 = np.maximum(n1*n1*(n1-1), 1)
+                            den2 = np.maximum(n2*n2*(n2-1), 1)
+                            df_denom = (std1**4)/den1 + (std2**4)/den2
+                            df = df_num / df_denom
+
+                            # p = scipy_stats.norm.cdf(Z)
+                            # p = (2 * p) - 1 # convert to two-sided p value
+                            # pct = p * 100
+                            # p1 = scipy_stats.t.sf(t, df) * 2
+                            p = scipy_stats.t.cdf(t, df)
+                            p = (2 * p) - 1 # two sided
                             pct = p * 100
 
                             # print(test.name, "\tvs\t", othertest.name, "\t", pct)
@@ -195,3 +205,4 @@ for met in metrics:
                             f.write("x    \t")
 
 
+print("\n")
