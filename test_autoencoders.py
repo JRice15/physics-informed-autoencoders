@@ -363,53 +363,46 @@ with open("test_results/" + fullname + ".stats.txt", "w") as f:
 
 # MSE Errbounds
 make_plot(xrange=step_arr, data=tuple(mse_avgs), dnames=names, title="Prediction MSE -- " + args.dataset, 
-    mark=mark, axlabels=("steps", "mean squared error"), legendloc="upper left",
+    mark=mark, axlabels=("days", "mean squared error"), legendloc="upper left",
     marker_step=(args.pred_steps // 5), fillbetweens=mse_errbounds,
-    fillbetween_desc="w/ 90% confidence", ylim=mse_ylim, ymin=0)
-plt.savefig("test_results/" + fullname + ".multistep_mse.w_confidence.png")
-plt.clf()
+    fillbetween_desc="w/ 90% confidence", ylim=mse_ylim, ymin=0,
+    directory="test_results/", filename=fullname+".multistep_mse.w_confidence.png")
 
 # MSE Clean
 make_plot(xrange=step_arr, data=tuple(mse_avgs), dnames=names, title="Prediction MSE -- " + args.dataset, 
-    mark=mark, axlabels=("steps", "mean squared error"), legendloc="upper left",
+    mark=mark, axlabels=("days", "mean squared error"), legendloc="upper left",
     marker_step=(args.pred_steps // 5), fillbetweens=None,
-    fillbetween_desc="", ylim=mse_ylim, ymin=0)
-plt.savefig("test_results/" + fullname + ".multistep_mse.png")
-plt.clf()
+    fillbetween_desc="", ylim=mse_ylim, ymin=0,
+    directory="test_results/", filename=fullname+".multistep_mse.png")
 
 # RelPred Errbounds
 make_plot(xrange=step_arr, data=tuple(relpred_avgs), dnames=names, title="Prediction Relative Error -- " + args.dataset, 
-    mark=mark, axlabels=("steps", "relative error"), legendloc="upper left",
+    mark=mark, axlabels=("days", "relative error"), legendloc="upper left",
     marker_step=(args.pred_steps // 5), fillbetweens=relpred_errbounds,
-    fillbetween_desc="w/ 90% confidence", ylim=relpred_ylim, ymin=0)
-plt.savefig("test_results/" + fullname + ".multistep_relpred_err.w_confidence.png")
-plt.clf()
+    fillbetween_desc="w/ 90% confidence", ylim=relpred_ylim, ymin=0,
+    directory="test_results/", filename=fullname+".multistep_relpred_err.w_confidence.png")
 
 # RelPred Clean
 make_plot(xrange=step_arr, data=tuple(relpred_avgs), dnames=names, title="Prediction Relative Error -- " + args.dataset, 
-    mark=mark, axlabels=("steps", "relative error"), legendloc="upper left",
+    mark=mark, axlabels=("days", "relative error"), legendloc="upper left",
     marker_step=(args.pred_steps // 5), fillbetweens=None,
-    fillbetween_desc="", ylim=relpred_ylim, ymin=0)
-plt.savefig("test_results/" + fullname + ".multistep_relpred_err.png")
-plt.clf()
+    fillbetween_desc="", ylim=relpred_ylim, ymin=0,
+    directory="test_results/", filename=fullname+".multistep_relpred_err.png")
 
 if units != "n/a":
     # DMAE Errbounds
     make_plot(xrange=step_arr, data=tuple(dmae_avgs), dnames=names, title="Mean Absolute Error in " + units.title() + " -- " + args.dataset, 
-        mark=mark, axlabels=("steps", units), legendloc="upper left",
+        mark=mark, axlabels=("days", units), legendloc="upper left",
         marker_step=(args.pred_steps // 5), fillbetweens=dmae_errbounds,
-        fillbetween_desc="w/ 90% confidence", ylim=None, ymin=0)
-    plt.savefig("test_results/" + fullname + ".multistep_ma_" + units + "_err.w_confidence.png")
-    plt.clf()
+        fillbetween_desc="w/ 90% confidence", ylim=None, ymin=0,
+        directory="test_results/", filename=fullname+".multistep_ma_"+units+"_err.w_confidence.png")
 
     # DMAE Clean
     make_plot(xrange=step_arr, data=tuple(dmae_avgs), dnames=names, title="Mean Absolute Error in " + units.title() + " -- " + args.dataset, 
-        mark=mark, axlabels=("steps", units), legendloc="upper left",
+        mark=mark, axlabels=("days", units), legendloc="upper left",
         marker_step=(args.pred_steps // 5), fillbetweens=None,
-        fillbetween_desc="", ylim=None, ymin=0)
-    plt.savefig("test_results/" + fullname + ".multistep_ma_" + units + "_err.png")
-    plt.clf()
-
+        fillbetween_desc="", ylim=None, ymin=0,
+        directory="test_results/", filename=fullname+".multistep_ma_"+units+"_err.png")
 
 
 print("Results have been save to 'test_results/'")

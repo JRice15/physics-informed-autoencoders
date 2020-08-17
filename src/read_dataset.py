@@ -124,7 +124,7 @@ class FlowCylinder(CustomDataset):
             else:
                 ext = ".png"
             filename = directory + "/" + filename + ext
-            plt.savefig(filename)
+            plt.savefig(filename, dpi=300)
         plt.close()
 
 
@@ -236,7 +236,7 @@ class SST(CustomDataset):
         self.Xmax = 0.65 * max(np.max(self.X), np.max(self.Xtest))
 
     def write_im(self, img, title, filename, directory="train_results", 
-            subtitle="", show=False, outline=False, descale=False):
+            subtitle="", show=False, outline=False, descale=True):
 
         # sometimes its just too hard to get this basemap package to work.
         # Easier to train in my gpu env and bring it back to my laptop to test 

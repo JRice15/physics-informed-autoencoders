@@ -1,5 +1,6 @@
 import math
 import re
+import os
 
 import cmocean
 import keras
@@ -55,50 +56,50 @@ class ImgWriter(Callback):
             )
 
 
-def write_im(img, title, filename, directory, subtitle="", show=False, outline=False):
-    """
-    if show=True, filename and directory can be None
-    """
-    shape = img.shape
-    img = np.rot90(img.T, k=1)
+# def write_im(img, title, filename, directory, subtitle="", show=False, outline=False):
+#     """
+#     if show=True, filename and directory can be None
+#     """
+#     shape = img.shape
+#     img = np.rot90(img.T, k=1)
 
-    x2 = np.arange(0, shape[0], 1)
-    y2 = np.arange(0, shape[1], 1)
-    mX, mY = np.meshgrid(x2, y2)
+#     x2 = np.arange(0, shape[0], 1)
+#     y2 = np.arange(0, shape[1], 1)
+#     mX, mY = np.meshgrid(x2, y2)
 
-    minmax = np.max(np.abs(img)) * 0.65
+#     minmax = np.max(np.abs(img)) * 0.65
 
-    plt.figure(facecolor="white",  edgecolor='k', figsize=(7.9,4.7))
-    # light contour (looks blurry otherwise)
-    plt.contourf(mY.T, mX.T, img, 80, cmap=cmocean.cm.balance, alpha=1, vmin=-minmax, vmax=minmax)
-    # heavy contour
-    if outline:
-        plt.contour(mY.T, mX.T, img, 40, colors='black', alpha=0.5, vmin=-minmax, vmax=minmax)
-    im = plt.imshow(img, cmap=cmocean.cm.balance, interpolation='none', vmin=-minmax, vmax=minmax)
+#     plt.figure(facecolor="white",  edgecolor='k', figsize=(7.9,4.7))
+#     # light contour (looks blurry otherwise)
+#     plt.contourf(mY.T, mX.T, img, 80, cmap=cmocean.cm.balance, alpha=1, vmin=-minmax, vmax=minmax)
+#     # heavy contour
+#     if outline:
+#         plt.contour(mY.T, mX.T, img, 40, colors='black', alpha=0.5, vmin=-minmax, vmax=minmax)
+#     im = plt.imshow(img, cmap=cmocean.cm.balance, interpolation='none', vmin=-minmax, vmax=minmax)
 
-    # wedge = mpatches.Wedge((0,99), 33, 270, 90, ec="#636363", color='#636363',lw = 5, zorder=200)
-    # im.axes.add_patch(p=wedge)
+#     # wedge = mpatches.Wedge((0,99), 33, 270, 90, ec="#636363", color='#636363',lw = 5, zorder=200)
+#     # im.axes.add_patch(p=wedge)
 
-    plt.tight_layout()
-    # plt.axis('off')
-    plt.xticks([])
-    plt.yticks([])
-    plt.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1)
-    plt.xlabel(subtitle)
+#     plt.tight_layout()
+#     # plt.axis('off')
+#     plt.xticks([])
+#     plt.yticks([])
+#     plt.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1)
+#     plt.xlabel(subtitle)
 
-    plt.title(title.title())
+#     plt.title(title.title())
 
-    if show:
-        plt.show()
-    else:
-        if filename[-1] == ".":
-            ext = "png"
-        else:
-            ext = ".png"
-        filename = directory + "/" + filename + ext
-        plt.savefig(filename)
+#     if show:
+#         plt.show()
+#     else:
+#         if filename[-1] == ".":
+#             ext = "png"
+#         else:
+#             ext = ".png"
+#         filename = directory + "/" + filename + ext
+#         plt.savefig(filename)
 
-    plt.close()
+#     plt.close()
 
 
 def get_num_str(num):
@@ -134,10 +135,8 @@ def save_history(H: History, run_name, secs, marker_step=1000, skip=30):
             data = (train_data, valdata)
             xrange = list(range(skip, len(train_data)+skip))
             make_plot(xrange=xrange, data=data, axlabels=(run_name,k), mark=mark,
-                dnames=("train","validation"), title=k + " by epoch", marker_step=marker_step,
-                skipshift=skip)
-            plt.savefig("stats/" + run_name + "/" + k + ".png")
-            plt.close()
+                dnames=("train","validation"), title=k+" by epoch", marker_step=marker_step,
+                skipshift=skip, directory="stats/"+run_name, filename=k+".png")
 
         with open(statsfile_name, "a") as f:
             if valdata is None:
@@ -149,7 +148,7 @@ def save_history(H: History, run_name, secs, marker_step=1000, skip=30):
 
 
 
-def make_plot(xrange, data, title, axlabels, dnames=None, marker_step=1, 
+def make_plot(xrange, data, title, axlabels, directory, filename, dnames=None, marker_step=1, 
         mark=0, legendloc="upper right", skipshift=0, fillbetweens=None, 
         fillbetween_desc="", ylim=None, ymin=None):
     """
@@ -160,6 +159,8 @@ def make_plot(xrange, data, title, axlabels, dnames=None, marker_step=1,
         axlabels: tuple (xname, yname)
     """
     assert isinstance(data, tuple)
+
+    fig, ax = plt.subplots(figsize=(6, 4.5))
 
     global_min = 1e20
     global_max = -1e20
@@ -201,6 +202,7 @@ def make_plot(xrange, data, title, axlabels, dnames=None, marker_step=1,
     plt.title(title)
     plt.xlabel(axlabels[0])
     plt.ylabel(axlabels[1] + " " + fillbetween_desc)
+    plt.tight_layout()
     # plt.yscale("log")
     if dnames is not None:
         dnames = [i for i in dnames if i is not None]
@@ -218,6 +220,10 @@ def make_plot(xrange, data, title, axlabels, dnames=None, marker_step=1,
     plt.ylim(bottom=global_min, top=new_top)
 
     plt.margins(x=0.125, y=0.1)
+
+    fname = os.path.join(directory, filename)
+    plt.savefig(fname, dpi=300)
+    plt.clf()
 
 
 def output_eigvals(weight_matrix, name, directory="stats", type_=None):

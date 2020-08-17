@@ -113,28 +113,25 @@ for met in metrics:
         plotdata = np.array([i.data[met][aggreg] for i in all_tests])
 
         mark = get_mark(plotdata)
+        name = args.name + "." + aggreg + "_" + met
         make_plot(xrange=step_arr, data=tuple(plotdata), dnames=dnames, title="Prediction " + aggreg.title() + " " + met_name(met), 
             mark=mark, axlabels=("steps", met_name(met)), legendloc="upper left",
             marker_step=30, fillbetweens=None,
-            fillbetween_desc="", ylim=None, ymin=0)
-        name = aggreg + "_" + met
-        print(name)
-        plt.savefig("meta_results/" + args.name + "/" + args.name + "." + name + ".png")
-        plt.clf()
+            fillbetween_desc="", ylim=None, ymin=0,
+            directory="meta_results/"+args.name, filename=name+".png")
 
         if aggreg in ["avg", "med"]:
             stds = np.array([i.data[met]["std"] for i in all_tests])
             n = np.array([i.num_seeds for i in all_tests])
             low, high, error = conf_interval_90(plotdata, stds, n)
             fillbetweens = [(low[i], high[i]) for i in range(len(low))]
+
+            name = name + ".w_90per_conf"
             make_plot(xrange=step_arr, data=tuple(plotdata), dnames=dnames, title="Prediction " + aggreg.title() + " " + met_name(met), 
                 mark=mark, axlabels=("steps", met_name(met)), legendloc="upper left",
                 marker_step=30, fillbetweens=fillbetweens,
-                fillbetween_desc="with 90% confidence interval", ylim=None, ymin=0)
-            name = aggreg + "_" + met + ".w_90per_conf"
-            print(name)
-            plt.savefig("meta_results/" + args.name + "/" + args.name + "." + name + ".png")
-            plt.clf()
+                fillbetween_desc="with 90% confidence interval", ylim=None, ymin=0,
+                directory="meta_results/"+args.name, filename=name+".png")
 
         if aggreg == "avg":
             # confidence interval bar graph
