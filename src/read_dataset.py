@@ -6,7 +6,7 @@ import abc
 import cmocean
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
-
+import matplotlib
 
 
 def data_from_name(name, flat, **kwargs):
@@ -141,8 +141,8 @@ class SST(CustomDataset):
         lats = np.load('data/lats.npy')
         lons = np.load('data/lons.npy')
 
-        # make 64x64 crop
         if not full:
+            # make 64x64 crop
             ybottom = 6
             xleft = 28
             xright = -58
@@ -169,7 +169,19 @@ class SST(CustomDataset):
         if flat:
             mask = mask.flatten()
 
+        def mask_func(x):
+            landmask = np.logical_not(mask)
+            x[:,landmask] = 0.0
+            return x
+
         m, n = imshape
+
+        # nonland = mask_func(X)
+        self.descaled_Xmin = 12
+        self.descaled_Xmax = 33
+        # unq = np.unique(nonland, return_counts=True)
+        # print([(unq[0][i], unq[1][i]) for i in range(len(unq[0]))])
+        # print(self.descaled_Xmin, self.descaled_Xmax)
 
         # scale
         X = X.reshape(-1,m*n)
@@ -183,7 +195,7 @@ class SST(CustomDataset):
             X = X.reshape(-1,m*n) 
         else:
             X = X.reshape(-1,m,n) 
-        
+    
         def de_scale(x, unflatten=False):
             """
             convert scaled -> celcius
@@ -195,6 +207,8 @@ class SST(CustomDataset):
             x = x + mean
             if unflatten:
                 x = x.reshape(-1,m,n)
+            if do_mask:
+                x = mask_func(x)
             return x.squeeze()
 
         self.de_scale = de_scale
@@ -206,9 +220,8 @@ class SST(CustomDataset):
 
         if do_mask:
             print("doing masking")
-            landmask = np.logical_not(mask)
-            X_train[:,landmask] = 0.0
-            X_test[:,landmask] = 0.0
+            X_train = mask_func(X_train)
+            X_test = mask_func(X_test)
 
         print("SST X shape:", X_train.shape, "Xtest shape:", X_test.shape)
 
@@ -223,7 +236,7 @@ class SST(CustomDataset):
         self.Xmax = 0.65 * max(np.max(self.X), np.max(self.Xtest))
 
     def write_im(self, img, title, filename, directory="train_results", 
-            subtitle="", show=False, outline=False):
+            subtitle="", show=False, outline=False, descale=False):
 
         # sometimes its just too hard to get this basemap package to work.
         # Easier to train in my gpu env and bring it back to my laptop to test 
@@ -236,9 +249,11 @@ class SST(CustomDataset):
         from mpl_toolkits.basemap import Basemap
 
         img = img.reshape(self.imshape)
-        fig, ax = plt.subplots(1, 1, facecolor="white",  edgecolor='k', figsize=(7,4))
+        if descale:
+            img = self.de_scale(img, unflatten=True)
+
+        fig, ax = plt.subplots(1, 1, facecolor="white",  edgecolor='k', figsize=(6,3))
         # ax = ax.ravel()
-        plt.title(title)
         # mintemp = np.min(img)
         # maxtemp = np.max(img)
         # minmax = np.maximum(mintemp,maxtemp)
@@ -261,14 +276,23 @@ class SST(CustomDataset):
                         urcrnrlon = 277.9,
                         #resolution='l',
                         ax=ax)
+        if descale:
+            vmin, vmax = self.descaled_Xmin, self.descaled_Xmax
+        else:
+            vmin, vmax = self.Xmin, self.Xmax
         m.pcolormesh(self.lons, self.lats, img, cmap=cmocean.cm.balance, 
-            latlon=True, alpha=1.0, shading='gouraud', vmin=self.Xmin, vmax=self.Xmax)
+            latlon=True, alpha=1.0, shading='gouraud', vmin=vmin, vmax=vmax)
         if not self.no_continents:
             m.fillcontinents(color='lightgray', lake_color='aqua')
             m.drawmapboundary(fill_color='lightgray')
             m.drawcoastlines(3)
-        plt.tight_layout()
 
+        if descale:
+            norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
+            plt.colorbar(matplotlib.cm.ScalarMappable(norm=norm, cmap=cmocean.cm.balance),
+                fraction=0.0256, pad=0.04)
+
+        plt.tight_layout()
         plt.xlabel(subtitle)
         plt.title(title.title())
         if show:
@@ -279,7 +303,7 @@ class SST(CustomDataset):
             else:
                 ext = ".png"
             filename = directory + "/" + filename + ext
-            plt.savefig(filename)
+            plt.savefig(filename, dpi=300)
         plt.close()
 
 
