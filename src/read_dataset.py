@@ -212,7 +212,7 @@ class SST(CustomDataset):
             return x.squeeze()
 
         self.de_scale = de_scale
-        self.de_scale_units = "Celcius"
+        self.de_scale_units = "Celcius MAE"
 
         # split into train and test set
         X_train = X[training_idx]

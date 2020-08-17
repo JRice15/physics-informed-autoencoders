@@ -93,12 +93,15 @@ def get_mark(data):
     return data.index(min(data))
 
 def met_name(met):
+    met = met.lower()
     if met == "mse":
         return "MSE"
     if met == "mae":
         return "MAE"
     if met == "relpred":
         return "Relative Error"
+    if met == "celcius":
+        return "Celcius MAE"
     return met.title()
 
 
@@ -115,7 +118,7 @@ for met in metrics:
         mark = get_mark(plotdata)
         name = args.name + "." + aggreg + "_" + met
         make_plot(xrange=step_arr, data=tuple(plotdata), dnames=dnames, title="Prediction " + aggreg.title() + " " + met_name(met), 
-            mark=mark, axlabels=("steps", met_name(met)), legendloc="upper left",
+            mark=mark, axlabels=("days", met_name(met)), legendloc="upper left",
             marker_step=30, fillbetweens=None,
             fillbetween_desc="", ylim=None, ymin=0,
             directory="meta_results/"+args.name, filename=name+".png")
@@ -128,7 +131,7 @@ for met in metrics:
 
             name = name + ".w_90per_conf"
             make_plot(xrange=step_arr, data=tuple(plotdata), dnames=dnames, title="Prediction " + aggreg.title() + " " + met_name(met), 
-                mark=mark, axlabels=("steps", met_name(met)), legendloc="upper left",
+                mark=mark, axlabels=("days", met_name(met)), legendloc="upper left",
                 marker_step=30, fillbetweens=fillbetweens,
                 fillbetween_desc="with 90% confidence interval", ylim=None, ymin=0,
                 directory="meta_results/"+args.name, filename=name+".png")

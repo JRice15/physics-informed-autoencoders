@@ -223,7 +223,7 @@ def make_plot(xrange, data, title, axlabels, directory, filename, dnames=None, m
 
     fname = os.path.join(directory, filename)
     plt.savefig(fname, dpi=300)
-    plt.clf()
+    plt.close()
 
 
 def output_eigvals(weight_matrix, name, directory="stats", type_=None):

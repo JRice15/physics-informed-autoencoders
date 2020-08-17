@@ -197,7 +197,7 @@ def run_one_test(model_path, data, tfdata, num_steps, step_arr):
             mean_dmae = np.mean(step_dmae)
         else:
             mean_dmae = 0
-        print(step, "steps relative error:", mean_relpred_err, descale_units, "MAE:", mean_dmae, "MSE:", mean_mse, "MAE:", mean_mae)
+        print(step, "steps relative error:", mean_relpred_err, descale_units+":", mean_dmae, "MSE:", mean_mse, "MAE:", mean_mae)
         mse_avg.append(mean_mse)
         mae_avg.append(mean_mae)
         relpred_avg.append(mean_relpred_err)
