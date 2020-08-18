@@ -1,0 +1,2 @@
+LrndAvg     test_results/c.sst-full.180.masked.q.stats.txt
+Persist     test_results/i.sst-full.180.masked.q.stats.txt

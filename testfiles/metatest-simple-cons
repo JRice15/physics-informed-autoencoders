@@ -1,0 +1,3 @@
+LrndAvg     test_results/c.sst-full.180.masked.q.stats.txt
+SimpleKAE   test_results/b.sst-full.180.masked.q.stats.txt
+ConsKAE     test_results/k.sst-full.180.masked.q.stats.txt

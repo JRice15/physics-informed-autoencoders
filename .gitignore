@@ -9,3 +9,9 @@ test_results/
 train_results/
 data/
 stats/
+meta_results/
+
+testfiles/old/
+slurm/tasks/
+
+model.png
