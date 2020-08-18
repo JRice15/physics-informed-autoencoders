@@ -39,7 +39,7 @@ parser.add_argument("--seed",type=int,default=0)
 parser.add_argument("--no-quick",action="store_true",default=False,help="whether to just test steps 1,3,5,10,20,30,...")
 parser.add_argument("--load-last",action="store_true",default=False,help="reload data of last training run")
 parser.add_argument("--overwrite",action="store_true",default=False)
-parser.add_argument("--mask",action="store_true",default=False,help="whether to mask out land")
+parser.add_argument("--no-mask",action="store_true",default=False,help="whether to not mask out land")
 
 args = parser.parse_args()
 
@@ -88,7 +88,7 @@ def run_name_from_model_path(model_path):
 
 
 
-if args.mask:
+if not args.no_mask:
     try:
         mask = dataset.mask
     except AttributeError:
@@ -301,7 +301,7 @@ fullname = args.name + "." + dataset.dataname
 if args.convolutional:
     fullname += ".conv"
 fullname += "." + str(args.pred_steps)
-if args.mask:
+if not args.no_mask:
     fullname += ".masked"
 if not args.no_quick:
     fullname += ".q"
