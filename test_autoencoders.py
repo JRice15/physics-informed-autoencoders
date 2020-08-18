@@ -392,17 +392,17 @@ make_plot(xrange=step_arr, data=tuple(relpred_avgs), dnames=names, title="Predic
 if units != "n/a":
     # DMAE Errbounds
     make_plot(xrange=step_arr, data=tuple(dmae_avgs), dnames=names, title="Mean Absolute Error in " + units.title() + " -- " + args.dataset, 
-        mark=mark, axlabels=("days", units), legendloc="upper left",
+        mark=mark, axlabels=("days", units+" MAE"), legendloc="upper left",
         marker_step=(args.pred_steps // 5), fillbetweens=dmae_errbounds,
         fillbetween_desc="w/ 90% confidence", ylim=None, ymin=0,
-        directory="test_results/", filename=fullname+".multistep_ma_"+units+"_err.w_confidence.png")
+        directory="test_results/", filename=fullname+".multistep_mae_"+units+"_err.w_confidence.png")
 
     # DMAE Clean
     make_plot(xrange=step_arr, data=tuple(dmae_avgs), dnames=names, title="Mean Absolute Error in " + units.title() + " -- " + args.dataset, 
-        mark=mark, axlabels=("days", units), legendloc="upper left",
+        mark=mark, axlabels=("days", units+" MAE"), legendloc="upper left",
         marker_step=(args.pred_steps // 5), fillbetweens=None,
         fillbetween_desc="", ylim=None, ymin=0,
-        directory="test_results/", filename=fullname+".multistep_ma_"+units+"_err.png")
+        directory="test_results/", filename=fullname+".multistep_mae_"+units+"_err.png")
 
 
 print("Results have been save to 'test_results/'")

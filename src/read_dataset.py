@@ -212,7 +212,7 @@ class SST(CustomDataset):
             return x.squeeze()
 
         self.de_scale = de_scale
-        self.de_scale_units = "Celcius MAE"
+        self.de_scale_units = "Celcius"
 
         # split into train and test set
         X_train = X[training_idx]
@@ -289,8 +289,9 @@ class SST(CustomDataset):
 
         if descale:
             norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
-            plt.colorbar(matplotlib.cm.ScalarMappable(norm=norm, cmap=cmocean.cm.balance),
-                fraction=0.0256, pad=0.04)
+            cbar = plt.colorbar(matplotlib.cm.ScalarMappable(norm=norm, cmap=cmocean.cm.balance),
+                fraction=0.0256, pad=0.03, label=self.de_scale_units)
+            # cbar.set_label(self.de_scale_units, rotation=270)
 
         plt.tight_layout()
         plt.xlabel(subtitle)
