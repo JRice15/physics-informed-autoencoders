@@ -40,6 +40,7 @@ parser.add_argument("--no-quick",action="store_true",default=False,help="whether
 parser.add_argument("--load-last",action="store_true",default=False,help="reload data of last training run")
 parser.add_argument("--overwrite",action="store_true",default=False)
 parser.add_argument("--no-mask",action="store_true",default=False,help="whether to not mask out land")
+parser.add_argument("--avg-plot",action="store_true",default=False,help="whether to create a plot of the average")
 
 args = parser.parse_args()
 
@@ -352,7 +353,12 @@ with open("test_results/" + fullname + ".stats.txt", "w") as f:
         for p in paths:
             f.write(str(p) + "\n")
     f.write("{:<7} {:<9} {:<9} {:<9} {:<9} {:<9}\n".format("", "Min", "Avg", "Max", "Med", "Std"))
+    avg_data = {}
     def writeline(name, stats):
+        try:
+            avg_data[name].append(stats["avg"])
+        except KeyError:
+            avg_data[name] = [stats["avg"]]
         f.write("{:<7} {min:<7.7f} {avg:<7.7f} {max:<7.7f} {med:<7.7f} {std:<7.7f}\n".format(name, **stats))
     for i in stats_timestep_inds:
         f.write("Step {}\n".format(step_arr[i]))
@@ -360,6 +366,14 @@ with open("test_results/" + fullname + ".stats.txt", "w") as f:
         writeline("MSE", get_stats(mse_avgs, i))
         writeline("MAE", get_stats(mae_avgs, i))
         writeline(units, get_stats(dmae_avgs, i))
+    if args.avg_plot:
+        these_steps = [step_arr[i] for i in stats_timestep_inds]
+        for k,d in avg_data.items():
+            make_plot(xrange=these_steps, data=tuple([d]), dnames=(k,), title="Prediction Average " + k + " -- " + args.dataset, 
+                mark=0, axlabels=("days", args.name), legendloc="upper left",
+                marker_step=(args.pred_steps // 5), fillbetweens=None,
+                fillbetween_desc="", ylim=None, ymin=0,
+                directory="./", filename="avg_" + k + "__" + fullname + ".png")
 
 # MSE Errbounds
 make_plot(xrange=step_arr, data=tuple(mse_avgs), dnames=names, title="Prediction MSE -- " + args.dataset, 
@@ -367,6 +381,7 @@ make_plot(xrange=step_arr, data=tuple(mse_avgs), dnames=names, title="Prediction
     marker_step=(args.pred_steps // 5), fillbetweens=mse_errbounds,
     fillbetween_desc="w/ 90% confidence", ylim=mse_ylim, ymin=0,
     directory="test_results/", filename=fullname+".multistep_mse.w_confidence.png")
+
 
 # MSE Clean
 make_plot(xrange=step_arr, data=tuple(mse_avgs), dnames=names, title="Prediction MSE -- " + args.dataset, 
