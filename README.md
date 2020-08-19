@@ -55,6 +55,16 @@ This will read data from the specified 'test_results/*.stats.txt' results files 
 If you wanted to compare the performance of a convolutional vs non-convolutional method, first you would train some number of otherwise identical seeds for each method, say 5. Then, you would create a testfile for each method, listing the 5 seeds of each method in a file each. You would run the tests, which would produce two sets of results in 'test_results'. You could compare directly from there by hand, or create another testfile for a meta test, listing the two '.stats.txt' files you want to compare. Running this meta_test while create graphs comparing multiple stats (MSE, MAE, Relative Prediction Error, etc) of the two methods over time.
 
 
+## Naming Differences from Paper
+Because the code was written before the names used in the paper were finalized, there
+are some discrepancies. Below is a list of conversions from the name in the paper to names used in the code and provided scripts:
+* Learned Average = Constant
+* Identity = Persistence
+* SimpleKAE = b, baseline
+* ConsKAE = k, koop
+* ConvKAE = bc, baseline-conv
+* ConvConsKAE = kc, koop-conv
+
 ## Model Types
 
 Physics informed:
