@@ -244,8 +244,8 @@ class KoopmanAutoencoder(BaseAE):
         fwd_mse = tf.reduce_mean(fwd_err ** 2)
         per_pred_fwd_mse = fwd_mse / forward_steps
         self.model.add_metric(per_pred_fwd_mse, name="fwd_mse", aggregation="mean")
-        per_pred_fwd_mae = tf.reduce_mean(tf.abs(fwd_err)) / forward_steps
-        self.model.add_metric(per_pred_fwd_mae, name="fwd_mae", aggregation="mean")
+        # per_pred_fwd_mae = tf.reduce_mean(tf.abs(fwd_err)) / forward_steps
+        # self.model.add_metric(per_pred_fwd_mae, name="fwd_mae", aggregation="mean")
 
         fwd_loss = fwd_wt * fwd_mse
         self.model.add_loss(fwd_loss)
@@ -254,7 +254,11 @@ class KoopmanAutoencoder(BaseAE):
         if self.has_bwd:
             bwd_pred = tf.stack(outputs[:backward_steps], axis=1)
             bwd_true = inpt[:,:backward_steps,:]
-            bwd_loss = bwd_wt * tf.reduce_mean((bwd_true - bwd_pred) ** 2)
+            bwd_mse = tf.reduce_mean((bwd_true - bwd_pred) ** 2)
+            per_pred_bwd_mse = bwd_mse / backward_steps
+            self.model.add_metric(per_pred_bwd_mse, name="bwd_mse", aggregation="mean")
+
+            bwd_loss = bwd_wt * bwd_mse
             self.model.add_loss(bwd_loss)
             self.model.add_metric(bwd_loss, name="bwd_loss", aggregation="mean")
 
