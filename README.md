@@ -1,7 +1,7 @@
 # Physics Informed Autoencoders
 
-This is the code for a recent paper "Analyzing Koopman approaches to physics-informed machine
-learninging for long-term sea-surface temperature forceasting", authored by myself,
+This is the code for a 2020 paper [Analyzing Koopman approaches to physics-informed machine
+learninging for long-term sea-surface temperature forceasting](https://arxiv.org/abs/2010.00399), authored by myself,
 Wenwei Xu, and Andrew August, at Pacific Northwest National Laboratory.
 
 ## What Is This
